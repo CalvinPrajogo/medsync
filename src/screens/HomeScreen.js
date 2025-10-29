@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SIZES } from '../constants/theme';
 
 const HomeScreen = () => {
@@ -44,7 +45,7 @@ const HomeScreen = () => {
                 <Text style={styles.cardSubtitle}>Scan barcode or QR code to add{'\n'}medicine</Text>
               </View>
               <View style={styles.iconCircle}>
-                <Text style={styles.scanIcon}>⊡</Text>
+                <MaterialCommunityIcons name="barcode-scan" size={36} color="white" />
               </View>
             </View>
           </TouchableOpacity>
