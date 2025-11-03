@@ -1,6 +1,11 @@
 import React from "react";
 import AppNavigator from "./src/navigation/AppNavigator";
+import { ScheduleProvider } from "./src/context/ScheduleContext";
 
 export default function App() {
-    return <AppNavigator />;
+    return (
+        <ScheduleProvider>
+            <AppNavigator />
+        </ScheduleProvider>
+    );
 }

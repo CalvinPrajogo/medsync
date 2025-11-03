@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { COLORS, SIZES } from "../constants/theme";
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" />
@@ -34,7 +34,10 @@ const HomeScreen = () => {
 
                 {/* Action Cards */}
                 <View style={styles.cardsContainer}>
-                    <TouchableOpacity style={styles.card}>
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => navigation.navigate("Schedule")}
+                    >
                         <View style={styles.cardContent}>
                             <View style={styles.cardTextContainer}>
                                 <Text style={styles.cardTitle}>
@@ -51,7 +54,10 @@ const HomeScreen = () => {
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.card}>
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => navigation.navigate("BarcodeScanner")}
+                    >
                         <View style={styles.cardContent}>
                             <View style={styles.cardTextContainer}>
                                 <Text style={styles.cardTitle}>
@@ -71,7 +77,10 @@ const HomeScreen = () => {
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.card}>
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => navigation.navigate("Database")}
+                    >
                         <View style={styles.cardContent}>
                             <View style={styles.cardTextContainer}>
                                 <Text style={styles.cardTitle}>

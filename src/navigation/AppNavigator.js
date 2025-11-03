@@ -3,6 +3,10 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import LoginScreen from "../screens/LoginScreen";
 import HomeScreen from "../screens/HomeScreen";
+import DatabaseScreen from "../screens/DatabaseScreen";
+import MedicineDetailScreen from "../screens/MedicineDetailScreen";
+import ScheduleScreen from "../screens/ScheduleScreen";
+import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -17,6 +21,14 @@ const AppNavigator = () => {
             >
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="Database" component={DatabaseScreen} />
+                <Stack.Screen name="MedicineDetail" component={MedicineDetailScreen} />
+                <Stack.Screen name="Schedule" component={ScheduleScreen} />
+                <Stack.Screen 
+                    name="BarcodeScanner" 
+                    component={BarcodeScannerScreen}
+                    options={{ presentation: "fullScreenModal" }}
+                />
             </Stack.Navigator>
         </NavigationContainer>
     );
