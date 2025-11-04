@@ -15,46 +15,100 @@ import { useSchedule } from "../context/ScheduleContext";
 const ScheduleScreen = ({ navigation }) => {
     const { scheduledMedicines, removeFromSchedule } = useSchedule();
 
-    const formatTiming = (timing) => {
-        if (!timing) return "Not set";
-        const { morning = 0, afternoon = 0, night = 0 } = timing;
-        return `${morning}-${afternoon}-${night}`;
+    const formatFrequency = (frequency) => {
+        const frequencyMap = {
+            daily: "Daily",
+            every_other_day: "Every Other Day",
+            twice_week: "Twice a Week",
+            once_week: "Once a Week",
+        };
+        return frequencyMap[frequency] || frequency;
     };
 
-    const getTimingLabel = (timing) => {
-        if (!timing) return "";
-        const { morning = 0, afternoon = 0, night = 0 } = timing;
-        const parts = [];
-        if (morning > 0) parts.push(`${morning} morning`);
-        if (afternoon > 0) parts.push(`${afternoon} afternoon`);
-        if (night > 0) parts.push(`${night} night`);
-        return parts.join(", ");
+    const formatTime = (date) => {
+        if (!date) return "";
+        const timeDate = new Date(date);
+        return timeDate.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        });
+    };
+
+    const formatDate = (date) => {
+        if (!date) return "";
+        const dateObj = new Date(date);
+        return dateObj.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+        });
     };
 
     const renderScheduleCard = ({ item }) => {
+        const timing = item.timing || {};
+        const doseTimes = timing.doseTimes || [];
+        
         return (
             <View style={styles.scheduleCard}>
                 <View style={styles.cardContent}>
                     <View style={styles.medicineInfo}>
                         <Text style={styles.medicineName}>{item.name}</Text>
                         <Text style={styles.dosage}>{item.dosage}</Text>
-                        <View style={styles.timingContainer}>
-                            <View style={styles.timingBadge}>
-                                <MaterialCommunityIcons
-                                    name="clock-outline"
-                                    size={16}
-                                    color={COLORS.primary}
-                                />
-                                <Text style={styles.timingText}>
-                                    {formatTiming(item.timing)}
-                                </Text>
+                        
+                        {timing.frequency && (
+                            <View style={styles.timingContainer}>
+                                <View style={styles.frequencyBadge}>
+                                    <MaterialCommunityIcons
+                                        name="calendar-refresh"
+                                        size={16}
+                                        color={COLORS.primary}
+                                    />
+                                    <Text style={styles.frequencyText}>
+                                        {formatFrequency(timing.frequency)}
+                                    </Text>
+                                </View>
+                                
+                                {timing.dosesPerDay && (
+                                    <Text style={styles.dosesText}>
+                                        {timing.dosesPerDay} {timing.dosesPerDay === 1 ? "dose" : "doses"} per day
+                                    </Text>
+                                )}
+                                
+                                {timing.nextDoseDate && (
+                                    <View style={styles.nextDoseContainer}>
+                                        <MaterialCommunityIcons
+                                            name="calendar-clock"
+                                            size={14}
+                                            color="#666"
+                                        />
+                                        <Text style={styles.nextDoseText}>
+                                            Next dose: {formatDate(timing.nextDoseDate)}
+                                        </Text>
+                                    </View>
+                                )}
+                                
+                                {doseTimes.length > 0 && (
+                                    <View style={styles.doseTimesContainer}>
+                                        <Text style={styles.doseTimesLabel}>Daily times:</Text>
+                                        <View style={styles.timeChips}>
+                                            {doseTimes.map((time, index) => (
+                                                <View key={index} style={styles.timeChip}>
+                                                    <MaterialCommunityIcons
+                                                        name="clock-outline"
+                                                        size={12}
+                                                        color={COLORS.primary}
+                                                    />
+                                                    <Text style={styles.timeChipText}>
+                                                        {formatTime(time)}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
+                                )}
                             </View>
-                            {getTimingLabel(item.timing) && (
-                                <Text style={styles.timingLabel}>
-                                    {getTimingLabel(item.timing)}
-                                </Text>
-                            )}
-                        </View>
+                        )}
                     </View>
                     <TouchableOpacity
                         style={styles.removeButton}
@@ -201,9 +255,9 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     timingContainer: {
-        marginTop: 4,
+        marginTop: 12,
     },
-    timingBadge: {
+    frequencyBadge: {
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "#F0F4FF",
@@ -211,18 +265,58 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 20,
         alignSelf: "flex-start",
-        marginBottom: 4,
+        marginBottom: 8,
     },
-    timingText: {
+    frequencyText: {
         fontSize: 14,
         fontWeight: "600",
         color: COLORS.primary,
         marginLeft: 6,
     },
-    timingLabel: {
+    dosesText: {
+        fontSize: 13,
+        color: "#666",
+        marginBottom: 6,
+    },
+    nextDoseContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    nextDoseText: {
+        fontSize: 13,
+        color: "#666",
+        marginLeft: 6,
+    },
+    doseTimesContainer: {
+        marginTop: 4,
+    },
+    doseTimesLabel: {
         fontSize: 12,
         color: "#666",
-        marginTop: 4,
+        marginBottom: 6,
+        fontWeight: "500",
+    },
+    timeChips: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
+    timeChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F5F5F7",
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E0E0E0",
+    },
+    timeChipText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#333",
+        marginLeft: 4,
     },
     removeButton: {
         padding: 4,
@@ -251,4 +345,3 @@ const styles = StyleSheet.create({
 });
 
 export default ScheduleScreen;
-

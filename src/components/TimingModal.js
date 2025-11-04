@@ -5,41 +5,387 @@ import {
     StyleSheet,
     Modal,
     TouchableOpacity,
-    TextInput,
+    ScrollView,
+    Platform,
 } from "react-native";
-import { COLORS, SIZES } from "../constants/theme";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { COLORS, SIZES } from "../constants/theme";
 
 const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
-    const [morning, setMorning] = useState("1");
-    const [afternoon, setAfternoon] = useState("1");
-    const [night, setNight] = useState("1");
+    const [step, setStep] = useState(1);
+    const [frequency, setFrequency] = useState("daily");
+    const [dosesPerDay, setDosesPerDay] = useState(1);
+    const [nextDoseDate, setNextDoseDate] = useState(new Date());
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [doseTimes, setDoseTimes] = useState([new Date()]);
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [currentTimeIndex, setCurrentTimeIndex] = useState(0);
+
+    const frequencyOptions = [
+        { label: "Daily", value: "daily" },
+        { label: "Every Other Day", value: "every_other_day" },
+        { label: "Twice a Week", value: "twice_week" },
+        { label: "Once a Week", value: "once_week" },
+    ];
+
+    const dosesOptions = [1, 2, 3, 4];
+
+    const handleDosesSelect = (value) => {
+        setDosesPerDay(value);
+        // Initialize dose times array based on number of doses
+        const times = Array(value)
+            .fill(null)
+            .map((_, i) => {
+                const time = new Date();
+                time.setHours(8 + i * 6, 0, 0, 0); // Default: 8am, 2pm, 8pm, 2am
+                return time;
+            });
+        setDoseTimes(times);
+    };
+
+    const handleDateChange = (event, selectedDate) => {
+        setShowDatePicker(Platform.OS === "ios");
+        if (selectedDate) {
+            setNextDoseDate(selectedDate);
+        }
+    };
+
+    const handleTimeChange = (event, selectedTime) => {
+        setShowTimePicker(Platform.OS === "ios");
+        if (selectedTime) {
+            const newTimes = [...doseTimes];
+            newTimes[currentTimeIndex] = selectedTime;
+            setDoseTimes(newTimes);
+        }
+    };
 
     const handleConfirm = () => {
-        const timing = {
-            morning: parseInt(morning) || 0,
-            afternoon: parseInt(afternoon) || 0,
-            night: parseInt(night) || 0,
+        const schedule = {
+            frequency,
+            dosesPerDay,
+            nextDoseDate,
+            doseTimes,
         };
-        onConfirm(timing);
-        // Reset values
-        setMorning("1");
-        setAfternoon("1");
-        setNight("1");
+        onConfirm(schedule);
+        setStep(1); // Reset to first step
+    };
+
+    const handleNext = () => {
+        if (step < 4) {
+            setStep(step + 1);
+        } else {
+            handleConfirm();
+        }
+    };
+
+    const handleBack = () => {
+        if (step > 1) {
+            setStep(step - 1);
+        }
+    };
+
+    const formatTime = (date) => {
+        return date.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        });
+    };
+
+    const formatDate = (date) => {
+        return date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+        });
+    };
+
+    const renderStep = () => {
+        switch (step) {
+            case 1:
+                return (
+                    <View>
+                        <Text style={styles.stepTitle}>
+                            How often do you take it?
+                        </Text>
+                        <View style={styles.optionsContainer}>
+                            {frequencyOptions.map((option) => (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                        styles.optionButton,
+                                        frequency === option.value &&
+                                            styles.optionButtonSelected,
+                                    ]}
+                                    onPress={() => setFrequency(option.value)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.optionText,
+                                            frequency === option.value &&
+                                                styles.optionTextSelected,
+                                        ]}
+                                    >
+                                        {option.label}
+                                    </Text>
+                                    {frequency === option.value && (
+                                        <MaterialCommunityIcons
+                                            name="check-circle"
+                                            size={20}
+                                            color={COLORS.primary}
+                                        />
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                );
+
+            case 2:
+                return (
+                    <View>
+                        <Text style={styles.stepTitle}>
+                            How many times per day?
+                        </Text>
+                        <View style={styles.optionsContainer}>
+                            {dosesOptions.map((num) => (
+                                <TouchableOpacity
+                                    key={num}
+                                    style={[
+                                        styles.optionButton,
+                                        dosesPerDay === num &&
+                                            styles.optionButtonSelected,
+                                    ]}
+                                    onPress={() => handleDosesSelect(num)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.optionText,
+                                            dosesPerDay === num &&
+                                                styles.optionTextSelected,
+                                        ]}
+                                    >
+                                        {num} {num === 1 ? "time" : "times"} a
+                                        day
+                                    </Text>
+                                    {dosesPerDay === num && (
+                                        <MaterialCommunityIcons
+                                            name="check-circle"
+                                            size={20}
+                                            color={COLORS.primary}
+                                        />
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                );
+
+            case 3:
+                return (
+                    <View>
+                    <Text style={styles.stepTitle}>
+                        When do you need to take the next dose?
+                    </Text>
+        
+                    <TouchableOpacity
+                        style={styles.datePickerButton}
+                        onPress={() => setShowDatePicker(true)}
+                    >
+                        <MaterialCommunityIcons
+                            name="calendar"
+                            size={24}
+                            color={COLORS.primary}
+                        />
+                        <Text style={styles.datePickerText}>
+                            {formatDate(nextDoseDate)}
+                        </Text>
+                    </TouchableOpacity>
+        
+                    {showDatePicker && (
+                        <Modal
+                            transparent={true}
+                            animationType="fade"
+                            visible={showDatePicker}
+                            onRequestClose={() => setShowDatePicker(false)}
+                        >
+                            <View
+                                style={{
+                                    flex: 1,
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    backgroundColor: "rgba(0,0,0,0.5)", // dimmed background
+                                }}
+                            >
+                                <View
+                                    style={{
+                                        backgroundColor: 'rgba(40, 40, 40)', // solid white background
+                                        borderRadius: 16,
+                                        padding: 16,
+                                        width: "90%",
+                                        elevation: 5,
+                                        shadowColor: "#0000",
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: .8,
+                                        shadowRadius: 3,
+                                    }}
+                                >
+                                    <DateTimePicker
+                                        value={nextDoseDate}
+                                        mode="date"
+                                        display={Platform.OS === "ios" ? "inline" : "calendar"}
+                                        onChange={(event, selectedDate) => {
+                                            if (Platform.OS === "android") setShowDatePicker(false);
+                                            handleDateChange(event, selectedDate);
+                                        }}
+                                        minimumDate={new Date()}
+                                    />
+                                    <TouchableOpacity
+                                        style={{
+                                            marginTop: 12,
+                                            alignSelf: "flex-end",
+                                            paddingVertical: 8,
+                                            paddingHorizontal: 16,
+                                            backgroundColor: COLORS.primary,
+                                            borderRadius: 8,
+                                        }}
+                                        onPress={() => setShowDatePicker(false)}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: "#fff",
+                                                fontWeight: "600",
+                                                fontSize: 16,
+                                            }}
+                                        >
+                                            Done
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </Modal>
+                    )}
+                </View>
+                );
+
+                case 4:
+                    return (
+                        <View>
+                            <Text style={styles.stepTitle}>
+                                What time do you take each dose?
+                            </Text>
+                            <View style={styles.timeListContainer}>
+                                {doseTimes.map((time, index) => (
+                                    <View key={index} style={styles.timeRow}>
+                                        <Text style={styles.timeLabel}>Dose {index + 1}</Text>
+                                        <TouchableOpacity
+                                            style={styles.timePickerButton}
+                                            onPress={() => {
+                                                setCurrentTimeIndex(index);
+                                                setShowTimePicker(true);
+                                            }}
+                                        >
+                                            <MaterialCommunityIcons
+                                                name="clock-outline"
+                                                size={20}
+                                                color={COLORS.primary}
+                                            />
+                                            <Text style={styles.timeText}>
+                                                {formatTime(time)}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                
+                            {showTimePicker && (
+                                <Modal
+                                    transparent={true}
+                                    animationType="fade"
+                                    visible={showTimePicker}
+                                    onRequestClose={() => setShowTimePicker(false)}
+                                >
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            backgroundColor: "rgba(0,0,0,0.5)",
+                                        }}
+                                    >
+                                        <View
+                                            style={{
+                                                backgroundColor: 'rgba(40, 40, 40)',
+                                                borderRadius: 16,
+                                                padding: 16,
+                                                width: "90%",
+                                                elevation: 5,
+                                                shadowColor: "#000",
+                                                shadowOffset: { width: 0, height: 2 },
+                                                shadowOpacity: 0.8,
+                                                shadowRadius: 3,
+                                            }}
+                                        >
+                                            <DateTimePicker
+                                                value={doseTimes[currentTimeIndex]}
+                                                mode="time"
+                                                display={Platform.OS === "ios" ? "spinner" : "default"}
+                                                onChange={(event, selectedTime) => {
+                                                    if (Platform.OS === "android") setShowTimePicker(false);
+                                                    handleTimeChange(event, selectedTime);
+                                                }}
+                                            />
+                                            <TouchableOpacity
+                                                style={{
+                                                    marginTop: 12,
+                                                    alignSelf: "flex-end",
+                                                    paddingVertical: 8,
+                                                    paddingHorizontal: 16,
+                                                    backgroundColor: COLORS.primary,
+                                                    borderRadius: 8,
+                                                }}
+                                                onPress={() => setShowTimePicker(false)}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        color: "#fff",
+                                                        fontWeight: "600",
+                                                        fontSize: 16,
+                                                    }}
+                                                >
+                                                    Done
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                </Modal>
+                            )}
+                        </View>
+                    );
+
+            default:
+                return null;
+        }
     };
 
     return (
         <Modal
             visible={visible}
             transparent={true}
-            animationType="slide"
+            animationType="fade"
             onRequestClose={onClose}
         >
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Set Medication Timing</Text>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <Text style={styles.modalTitle}>
+                            Set Medication Schedule
+                        </Text>
+                        <TouchableOpacity
+                            onPress={onClose}
+                            style={styles.closeButton}
+                        >
                             <MaterialCommunityIcons
                                 name="close"
                                 size={24}
@@ -49,82 +395,45 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
                     </View>
 
                     <Text style={styles.medicineName}>{medicineName}</Text>
-                    <Text style={styles.instruction}>
-                        Enter the number of tablets for each time of day
-                    </Text>
 
-                    {/* Morning */}
-                    <View style={styles.timingRow}>
-                        <View style={styles.timingLabelContainer}>
-                            <MaterialCommunityIcons
-                                name="weather-sunny"
-                                size={20}
-                                color="#FFA500"
+                    {/* Progress Indicator */}
+                    <View style={styles.progressContainer}>
+                        {[1, 2, 3, 4].map((s) => (
+                            <View
+                                key={s}
+                                style={[
+                                    styles.progressDot,
+                                    s === step && styles.progressDotActive,
+                                    s < step && styles.progressDotComplete,
+                                ]}
                             />
-                            <Text style={styles.timingLabel}>Morning</Text>
-                        </View>
-                        <TextInput
-                            style={styles.input}
-                            value={morning}
-                            onChangeText={setMorning}
-                            keyboardType="numeric"
-                            placeholder="0"
-                            maxLength={2}
-                        />
+                        ))}
                     </View>
 
-                    {/* Afternoon */}
-                    <View style={styles.timingRow}>
-                        <View style={styles.timingLabelContainer}>
-                            <MaterialCommunityIcons
-                                name="weather-partly-cloudy"
-                                size={20}
-                                color="#FF6B6B"
-                            />
-                            <Text style={styles.timingLabel}>Afternoon</Text>
-                        </View>
-                        <TextInput
-                            style={styles.input}
-                            value={afternoon}
-                            onChangeText={setAfternoon}
-                            keyboardType="numeric"
-                            placeholder="0"
-                            maxLength={2}
-                        />
-                    </View>
-
-                    {/* Night */}
-                    <View style={styles.timingRow}>
-                        <View style={styles.timingLabelContainer}>
-                            <MaterialCommunityIcons
-                                name="weather-night"
-                                size={20}
-                                color="#4A90E2"
-                            />
-                            <Text style={styles.timingLabel}>Night</Text>
-                        </View>
-                        <TextInput
-                            style={styles.input}
-                            value={night}
-                            onChangeText={setNight}
-                            keyboardType="numeric"
-                            placeholder="0"
-                            maxLength={2}
-                        />
-                    </View>
+                    <ScrollView style={styles.stepContainer}>
+                        {renderStep()}
+                    </ScrollView>
 
                     <View style={styles.buttonContainer}>
+                        {step > 1 && (
+                            <TouchableOpacity
+                                style={[styles.button, styles.backButton]}
+                                onPress={handleBack}
+                            >
+                                <Text style={styles.backButtonText}>Back</Text>
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity
-                            style={[styles.button, styles.cancelButton]}
-                            onPress={onClose}
+                            style={[
+                                styles.button,
+                                styles.nextButton,
+                                step === 1 && styles.fullWidthButton,
+                            ]}
+                            onPress={handleNext}
                         >
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.button, styles.confirmButton]}
-                            onPress={handleConfirm}
-                        >
-                            <Text style={styles.confirmButtonText}>Add to Schedule</Text>
+                            <Text style={styles.nextButtonText}>
+                                {step === 4 ? "Add to Schedule" : "Next"}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -137,14 +446,18 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.5)",
-        justifyContent: "flex-end",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 20,
     },
     modalContent: {
         backgroundColor: COLORS.white,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        borderRadius: 24,
         padding: SIZES.padding,
         paddingBottom: 40,
+        maxHeight: "85%",
+        width: "100%",
+        maxWidth: 500,
     },
     modalHeader: {
         flexDirection: "row",
@@ -164,50 +477,111 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "600",
         color: COLORS.primary,
-        marginBottom: 8,
+        marginBottom: 16,
     },
-    instruction: {
-        fontSize: 14,
-        color: "#666",
+    progressContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 8,
         marginBottom: 24,
     },
-    timingRow: {
+    progressDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "#E5E5E5",
+    },
+    progressDotActive: {
+        backgroundColor: COLORS.primary,
+        width: 24,
+    },
+    progressDotComplete: {
+        backgroundColor: COLORS.primary,
+    },
+    stepContainer: {
+        minHeight: 300,
+        maxHeight: 400,
+    },
+    stepTitle: {
+        fontSize: 20,
+        fontWeight: "600",
+        color: "#000",
+        marginBottom: 20,
+    },
+    optionsContainer: {
+        gap: 12,
+    },
+    optionButton: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 20,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        padding: 16,
+        backgroundColor: "#F5F5F7",
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: "transparent",
+    },
+    optionButtonSelected: {
+        backgroundColor: "#F0EBFF",
+        borderColor: COLORS.primary,
+    },
+    optionText: {
+        fontSize: 16,
+        fontWeight: "500",
+        color: "#666",
+    },
+    optionTextSelected: {
+        color: COLORS.primary,
+        fontWeight: "600",
+    },
+    datePickerButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 16,
+        backgroundColor: "#F5F5F7",
+        borderRadius: 12,
+        gap: 12,
+    },
+    datePickerText: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#000",
+    },
+    timeListContainer: {
+        gap: 12,
+    },
+    timeRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
         backgroundColor: "#F5F5F7",
         borderRadius: 12,
     },
-    timingLabelContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    timingLabel: {
+    timeLabel: {
         fontSize: 16,
         fontWeight: "500",
         color: "#000",
-        marginLeft: 12,
     },
-    input: {
+    timePickerButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
         backgroundColor: COLORS.white,
-        borderWidth: 1,
-        borderColor: "#E5E5E5",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         borderRadius: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
+    },
+    timeText: {
         fontSize: 16,
         fontWeight: "600",
         color: "#000",
-        width: 80,
-        textAlign: "center",
     },
     buttonContainer: {
         flexDirection: "row",
         gap: 12,
-        marginTop: 8,
+        marginTop: 20,
     },
     button: {
         flex: 1,
@@ -216,18 +590,21 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    cancelButton: {
+    fullWidthButton: {
+        flex: 1,
+    },
+    backButton: {
         backgroundColor: "#F5F5F7",
     },
-    confirmButton: {
+    nextButton: {
         backgroundColor: COLORS.primary,
     },
-    cancelButtonText: {
+    backButtonText: {
         fontSize: 16,
         fontWeight: "600",
         color: "#666",
     },
-    confirmButtonText: {
+    nextButtonText: {
         fontSize: 16,
         fontWeight: "600",
         color: COLORS.white,
@@ -235,4 +612,3 @@ const styles = StyleSheet.create({
 });
 
 export default TimingModal;
-
