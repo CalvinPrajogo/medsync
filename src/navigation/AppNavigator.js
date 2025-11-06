@@ -9,6 +9,7 @@ import ScheduleScreen from "../screens/ScheduleScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import ChatbotScreen from "../screens/ChatbotScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -33,6 +34,7 @@ const AppNavigator = () => {
                 />
                 <Stack.Screen name="Profile" component={ProfileScreen} />
                 <Stack.Screen name="Notifications" component={NotificationsScreen} />
+                <Stack.Screen name="Chatbot" component={ChatbotScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

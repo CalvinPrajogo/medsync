@@ -101,6 +101,29 @@ const HomeScreen = ({ navigation }) => {
                             </View>
                         </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => navigation.navigate("Chatbot")}
+                    >
+                        <View style={styles.cardContent}>
+                            <View style={styles.cardTextContainer}>
+                                <Text style={styles.cardTitle}>
+                                    Chat Assistant
+                                </Text>
+                                <Text style={styles.cardSubtitle}>
+                                    Ask questions about medications{"\n"}and health
+                                </Text>
+                            </View>
+                            <View style={styles.iconCircle}>
+                                <MaterialCommunityIcons
+                                    name="robot"
+                                    size={36}
+                                    color="white"
+                                />
+                            </View>
+                        </View>
+                    </TouchableOpacity>
                 </View>
             </View>
         </SafeAreaView>
