@@ -96,12 +96,12 @@ User question: ${userMessage}`;
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={["top"]}>
             <StatusBar barStyle="light-content" />
             <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                behavior={Platform.OS === "ios" ? "padding" : undefined}
                 style={styles.keyboardView}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
             >
                 {/* Header */}
                 <View style={styles.header}>
@@ -156,7 +156,10 @@ User question: ${userMessage}`;
                 </ScrollView>
 
                 {/* Input Area */}
-                <View style={styles.inputContainer}>
+                <View style={[
+                    styles.inputContainer,
+                    { paddingBottom: Platform.OS === "ios" ? 8 : 12 }
+                ]}>
                     <TextInput
                         style={styles.input}
                         placeholder="Type your message..."
@@ -260,7 +263,7 @@ const styles = StyleSheet.create({
     inputContainer: {
         flexDirection: "row",
         paddingHorizontal: SIZES.padding,
-        paddingVertical: 12,
+        paddingTop: 8,
         backgroundColor: "#FFFFFF",
         borderTopWidth: 1,
         borderTopColor: "#E5E5E5",
