@@ -23,7 +23,10 @@ const HomeScreen = ({ navigation }) => {
                 >
                     <Text style={styles.iconText}>👤</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.iconButton}>
+                <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => navigation.navigate("Notifications")}
+                >
                     <Text style={styles.iconText}>💬</Text>
                 </TouchableOpacity>
             </View>
