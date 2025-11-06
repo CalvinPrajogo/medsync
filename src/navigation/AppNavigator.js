@@ -8,6 +8,7 @@ import MedicineDetailScreen from "../screens/MedicineDetailScreen";
 import ScheduleScreen from "../screens/ScheduleScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -15,9 +16,9 @@ const AppNavigator = () => {
     return (
         <NavigationContainer>
             <Stack.Navigator
-                initialRouteName="Login" // Start with Login
+                initialRouteName="Login" 
                 screenOptions={{
-                    headerShown: false, // Hide default header
+                    headerShown: false,
                 }}
             >
                 <Stack.Screen name="Login" component={LoginScreen} />
@@ -31,6 +32,7 @@ const AppNavigator = () => {
                     options={{ presentation: "fullScreenModal" }}
                 />
                 <Stack.Screen name="Profile" component={ProfileScreen} />
+                <Stack.Screen name="Notifications" component={NotificationsScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );
