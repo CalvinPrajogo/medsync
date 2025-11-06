@@ -17,7 +17,10 @@ const HomeScreen = ({ navigation }) => {
 
             {/* Header with icons */}
             <View style={styles.header}>
-                <TouchableOpacity style={styles.iconButton}>
+                <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => navigation.navigate("Profile")}
+                >
                     <Text style={styles.iconText}>👤</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.iconButton}>

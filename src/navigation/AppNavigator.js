@@ -7,6 +7,7 @@ import DatabaseScreen from "../screens/DatabaseScreen";
 import MedicineDetailScreen from "../screens/MedicineDetailScreen";
 import ScheduleScreen from "../screens/ScheduleScreen";
 import BarcodeScannerScreen from "../screens/BarcodeScannerScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -29,6 +30,7 @@ const AppNavigator = () => {
                     component={BarcodeScannerScreen}
                     options={{ presentation: "fullScreenModal" }}
                 />
+                <Stack.Screen name="Profile" component={ProfileScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );
