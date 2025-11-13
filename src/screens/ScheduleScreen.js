@@ -6,11 +6,13 @@ import {
     StatusBar,
     FlatList,
     TouchableOpacity,
+    Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSchedule } from "../context/ScheduleContext";
+import * as Notifications from "expo-notifications";
 
 const ScheduleScreen = ({ navigation }) => {
     const { scheduledMedicines, removeFromSchedule } = useSchedule();
@@ -45,16 +47,58 @@ const ScheduleScreen = ({ navigation }) => {
         });
     };
 
+    const handleRemoveMedicine = async (item) => {
+        Alert.alert(
+            "Remove Medication",
+            `Are you sure you want to remove ${item.name} from your schedule? This will also cancel all reminders.`,
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel",
+                },
+                {
+                    text: "Remove",
+                    style: "destructive",
+                    onPress: async () => {
+                        // Cancel all notifications for this medicine
+                        if (item.timing?.notificationIds) {
+                            for (const notificationId of item.timing.notificationIds) {
+                                try {
+                                    await Notifications.cancelScheduledNotificationAsync(notificationId);
+                                } catch (error) {
+                                    console.error("Error canceling notification:", error);
+                                }
+                            }
+                        }
+                        removeFromSchedule(item.id);
+                    },
+                },
+            ]
+        );
+    };
+
     const renderScheduleCard = ({ item }) => {
         const timing = item.timing || {};
         const doseTimes = timing.doseTimes || [];
+        const hasNotifications = timing.notificationIds && timing.notificationIds.length > 0;
         
         return (
             <View style={styles.scheduleCard}>
                 <View style={styles.cardContent}>
                     <View style={styles.medicineInfo}>
-                        <Text style={styles.medicineName}>{item.name}</Text>
-                        <Text style={styles.dosage}>{item.dosage}</Text>
+                        <View style={styles.nameRow}>
+                            <Text style={styles.medicineName}>{item.name}</Text>
+                            {hasNotifications && (
+                                <View style={styles.notificationBadge}>
+                                    <MaterialCommunityIcons
+                                        name="bell-ring"
+                                        size={14}
+                                        color={COLORS.primary}
+                                    />
+                                </View>
+                            )}
+                        </View>
+
                         
                         {timing.frequency && (
                             <View style={styles.timingContainer}>
@@ -90,7 +134,9 @@ const ScheduleScreen = ({ navigation }) => {
                                 
                                 {doseTimes.length > 0 && (
                                     <View style={styles.doseTimesContainer}>
-                                        <Text style={styles.doseTimesLabel}>Daily times:</Text>
+                                        <View style={styles.doseTimesHeader}>
+                                            <Text style={styles.doseTimesLabel}>Daily times:</Text>
+                                        </View>
                                         <View style={styles.timeChips}>
                                             {doseTimes.map((time, index) => (
                                                 <View key={index} style={styles.timeChip}>
@@ -112,7 +158,7 @@ const ScheduleScreen = ({ navigation }) => {
                     </View>
                     <TouchableOpacity
                         style={styles.removeButton}
-                        onPress={() => removeFromSchedule(item.id)}
+                        onPress={() => handleRemoveMedicine(item)}
                     >
                         <MaterialCommunityIcons
                             name="close-circle"
@@ -243,11 +289,24 @@ const styles = StyleSheet.create({
     medicineInfo: {
         flex: 1,
     },
+    nameRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 6,
+    },
     medicineName: {
         fontSize: 20,
         fontWeight: "bold",
         color: "#000",
-        marginBottom: 6,
+        marginRight: 8,
+    },
+    notificationBadge: {
+        backgroundColor: "#F0F4FF",
+        borderRadius: 12,
+        width: 24,
+        height: 24,
+        justifyContent: "center",
+        alignItems: "center",
     },
     dosage: {
         fontSize: 14,
@@ -291,11 +350,21 @@ const styles = StyleSheet.create({
     doseTimesContainer: {
         marginTop: 4,
     },
+    doseTimesHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 6,
+    },
     doseTimesLabel: {
         fontSize: 12,
         color: "#666",
-        marginBottom: 6,
         fontWeight: "500",
+    },
+    reminderText: {
+        fontSize: 10,
+        color: "#666",
+        fontStyle: "italic",
     },
     timeChips: {
         flexDirection: "row",

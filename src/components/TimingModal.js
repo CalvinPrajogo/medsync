@@ -38,7 +38,7 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
             .fill(null)
             .map((_, i) => {
                 const time = new Date();
-                time.setHours(8 + i * 6, 0, 0, 0); // Default: 8am, 2pm, 8pm, 2am
+                time.setHours(8 + i * 6, 0, 0, 0); 
                 return time;
             });
         setDoseTimes(times);
@@ -186,7 +186,7 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
                 return (
                     <View>
                     <Text style={styles.stepTitle}>
-                        When do you need to take the next dose?
+                        When are you taking your next dose?
                     </Text>
         
                     <TouchableOpacity
@@ -215,12 +215,12 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
                                     flex: 1,
                                     justifyContent: "center",
                                     alignItems: "center",
-                                    backgroundColor: "rgba(0,0,0,0.5)", // dimmed background
+                                    backgroundColor: "rgba(0,0,0,0.5)", 
                                 }}
                             >
                                 <View
                                     style={{
-                                        backgroundColor: 'rgba(40, 40, 40)', // solid white background
+                                        backgroundColor: 'rgba(40, 40, 40)', 
                                         borderRadius: 16,
                                         padding: 16,
                                         width: "90%",

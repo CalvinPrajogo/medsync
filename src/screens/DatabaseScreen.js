@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -7,6 +7,8 @@ import {
     FlatList,
     TouchableOpacity,
     TextInput,
+    Alert,
+    Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/theme";
@@ -15,6 +17,16 @@ import MedicineCard from "../components/MedicineCard";
 import TimingModal from "../components/TimingModal";
 import Toast from "../components/Toast";
 import { useSchedule } from "../context/ScheduleContext";
+import * as Notifications from "expo-notifications";
+
+// Configure notification behavior
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+    }),
+});
 
 const DatabaseScreen = ({ navigation }) => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -23,6 +35,176 @@ const DatabaseScreen = ({ navigation }) => {
     const [toastVisible, setToastVisible] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
     const { addToSchedule } = useSchedule();
+
+    useEffect(() => {
+        registerForPushNotifications();
+    }, []);
+
+    const registerForPushNotifications = async () => {
+        try {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== "granted") {
+                const { status } = await Notifications.requestPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== "granted") {
+                Alert.alert(
+                    "Notifications Disabled",
+                    "Please enable notifications in settings to receive medication reminders.",
+                    [{ text: "OK" }]
+                );
+                return;
+            }
+
+            if (Platform.OS === "android") {
+                await Notifications.setNotificationChannelAsync("medication-reminders", {
+                    name: "Medication Reminders",
+                    importance: Notifications.AndroidImportance.MAX,
+                    vibrationPattern: [0, 250, 250, 250],
+                    lightColor: COLORS.primary,
+                    sound: true,
+                    enableVibrate: true,
+                    showBadge: true,
+                });
+            }
+        } catch (error) {
+        }
+    };
+
+    const scheduleNotifications = async (medicine, timing) => {
+        try {
+            const notificationIds = [];
+            const { doseTimes, frequency } = timing;
+
+
+            const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+            for (const notification of scheduledNotifications) {
+                if (notification.content.data?.medicineId === medicine.id) {
+                    await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+                }
+            }
+
+
+            if (frequency === 'daily') {
+                for (let i = 0; i < doseTimes.length; i++) {
+                    const doseTime = new Date(doseTimes[i]);
+                    const hours = doseTime.getHours();
+                    const minutes = doseTime.getMinutes();
+
+                    const notificationId = await Notifications.scheduleNotificationAsync({
+                        content: {
+                            title: "💊 Time to Take Your Medicine",
+                            body: `It's time to take ${medicine.name}`,
+                            data: {
+                                medicineId: medicine.id,
+                                medicineName: medicine.name,
+                                doseNumber: i + 1,
+                                dosage: medicine.dosage,
+                            },
+                            sound: true,
+                            priority: Platform.OS === "android" 
+                                ? Notifications.AndroidNotificationPriority.HIGH 
+                                : undefined,
+                            ...(Platform.OS === "android" && {
+                                channelId: "medication-reminders",
+                            }),
+                        },
+                        trigger: {
+                            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+                            hour: hours,
+                            minute: minutes,
+                            repeats: true,
+                        },
+                    });
+
+                    notificationIds.push(notificationId);
+
+                    
+
+                    const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+
+                }
+            } else {
+                for (let i = 0; i < doseTimes.length; i++) {
+                    const doseTime = new Date(doseTimes[i]);
+                    const now = new Date();
+                    
+
+                    
+                    let firstNotificationTime = new Date();
+                    firstNotificationTime.setHours(doseTime.getHours());
+                    firstNotificationTime.setMinutes(doseTime.getMinutes());
+                    firstNotificationTime.setSeconds(0);
+                    firstNotificationTime.setMilliseconds(0);
+                
+                    
+                    
+                    const millisecondsUntilFirstNotification = firstNotificationTime - now;
+                    const secondsUntilFirstNotification = Math.floor(millisecondsUntilFirstNotification / 1000);
+                    
+                    
+
+                    let repeatInterval;
+                    switch (frequency) {
+                        case "every_other_day":
+                            repeatInterval = 2 * 24 * 60 * 60; // 2 days
+                            break;
+                        case "twice_week":
+                            repeatInterval = 3.5 * 24 * 60 * 60; // 3.5 days
+                            break;
+                        case "once_week":
+                            repeatInterval = 7 * 24 * 60 * 60; // 7 days
+                            break;
+                        default:
+                            repeatInterval = 24 * 60 * 60; // 1 day fallback
+                    }
+
+
+
+                    const notificationId = await Notifications.scheduleNotificationAsync({
+                        content: {
+                            title: "💊 Time to Take Your Medicine",
+                            body: `It's time to take ${medicine.name}`,
+                            data: {
+                                medicineId: medicine.id,
+                                medicineName: medicine.name,
+                                doseNumber: i + 1,
+                                dosage: medicine.dosage,
+                            },
+                            sound: true,
+                            priority: Platform.OS === "android" 
+                                ? Notifications.AndroidNotificationPriority.HIGH 
+                                : undefined,
+                            ...(Platform.OS === "android" && {
+                                channelId: "medication-reminders",
+                            }),
+                        },
+                        trigger: {
+                            seconds: secondsUntilFirstNotification,
+                            repeats: true,
+                        },
+                    });
+
+                    notificationIds.push(notificationId);
+
+                    
+                    // Verify the scheduled notification
+                    const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+                    const justScheduled = allScheduled.find(n => n.identifier === notificationId);
+                }
+            }
+
+
+            return notificationIds;
+        } catch (error) {
+            Alert.alert("Error", "Failed to schedule medication reminders.");
+            return [];
+        }
+    };
+
     // Test medication data
     const medicines = [
         {
@@ -229,11 +411,20 @@ const DatabaseScreen = ({ navigation }) => {
         setTimingModalVisible(true);
     };
 
-    const handleConfirmTiming = (timing) => {
+    const handleConfirmTiming = async (timing) => {
         if (selectedMedicine) {
-            addToSchedule(selectedMedicine, timing);
+            // Schedule local notifications
+            const notificationIds = await scheduleNotifications(selectedMedicine, timing);
+            
+            // Add notification IDs to the timing object
+            const timingWithNotifications = {
+                ...timing,
+                notificationIds,
+            };
+
+            addToSchedule(selectedMedicine, timingWithNotifications);
             setTimingModalVisible(false);
-            setToastMessage(`${selectedMedicine.name} added to schedule`);
+            setToastMessage(`${selectedMedicine.name} added with ${notificationIds.length} reminder${notificationIds.length > 1 ? 's' : ''}`);
             setToastVisible(true);
             setSelectedMedicine(null);
         }
@@ -439,4 +630,3 @@ const styles = StyleSheet.create({
 });
 
 export default DatabaseScreen;
-
