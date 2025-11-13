@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# gemini file w/ API key for chatbot
+gemini.js
