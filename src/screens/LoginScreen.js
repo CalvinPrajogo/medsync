@@ -27,13 +27,13 @@ const LoginScreen = ({ navigation }) => {
         }
 
         setLoading(true);
-        try {
-            await login(email, password);
+        const result = await login(email, password);
+        setLoading(false);
+
+        if (result.success) {
             navigation.navigate("Home");
-        } catch (error) {
-            Alert.alert("Error", error.message);
-        } finally {
-            setLoading(false);
+        } else {
+            Alert.alert("Error", result.message);
         }
     };
 
