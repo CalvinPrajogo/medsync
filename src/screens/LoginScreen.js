@@ -10,8 +10,33 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/theme";
+import { useState } from 'react';
+import { Alert, ActivityIndicator } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const { login } = useAuth();
+
+    const handleLogin = async () => {
+        if (!email || !password) {
+            Alert.alert("Error", "Please fill in all fields");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await login(email, password);
+            navigation.navigate("Home");
+        } catch (error) {
+            Alert.alert("Error", error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
@@ -27,6 +52,8 @@ const LoginScreen = ({ navigation }) => {
 
                     {/* Email Input */}
                     <TextInput
+                        value={email}
+                        onChangeText={setEmail}
                         style={styles.input}
                         placeholder="Email"
                         placeholderTextColor="#9CA3AF"
@@ -36,6 +63,8 @@ const LoginScreen = ({ navigation }) => {
 
                     {/* Password Input */}
                     <TextInput
+                        value={password}
+                        onChangeText={setPassword}
                         style={styles.input}
                         placeholder="Password"
                         placeholderTextColor="#9CA3AF"
@@ -52,9 +81,14 @@ const LoginScreen = ({ navigation }) => {
                     {/* Sign In Button */}
                     <TouchableOpacity
                         style={styles.signInButton}
-                        onPress={() => navigation.navigate("Home")}
+                        onPress={handleLogin}
+                        disabled={loading}
                     >
-                        <Text style={styles.signInButtonText}>Sign in</Text>
+                        {loading ? (
+                            <ActivityIndicator color={COLORS.white} />
+                        ) : (
+                            <Text style={styles.signInButtonText}>Sign in</Text>
+                        )}
                     </TouchableOpacity>
 
                     {/* Create Account */}
