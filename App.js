@@ -4,8 +4,10 @@ import { ScheduleProvider } from "./src/context/ScheduleContext";
 
 export default function App() {
     return (
-        <ScheduleProvider>
-            <AppNavigator />
-        </ScheduleProvider>
+        <AuthProvider>
+            <ScheduleProvider>
+                <AppNavigator />
+            </ScheduleProvider>
+        </AuthProvider>
     );
 }
