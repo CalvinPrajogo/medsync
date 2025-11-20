@@ -31,7 +31,18 @@ const ScheduleScreen = ({ navigation }) => {
 
    const formatTime = (date) => {
        if (!date) return "";
+       // If date is a time-only string like "HH:mm", format it manually
+       if (typeof date === 'string' && /^\d{1,2}:\d{2}(:\d{2})?$/.test(date)) {
+           const parts = date.split(":").map(Number);
+           const hours = parts[0];
+           const minutes = parts[1] || 0;
+           const hour12 = ((hours + 11) % 12) + 1; // 1-12
+           const ampm = hours >= 12 ? "PM" : "AM";
+           return `${hour12}:${String(minutes).padStart(2, '0')} ${ampm}`;
+       }
+
        const timeDate = new Date(date);
+       if (Number.isNaN(timeDate.getTime())) return "";
        return timeDate.toLocaleTimeString("en-US", {
            hour: "numeric",
            minute: "2-digit",
