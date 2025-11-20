@@ -45,7 +45,7 @@ const LoginScreen = ({ navigation }) => {
             >
                 <View style={styles.content}>
                     {/* Header */}
-                    <Text style={styles.title}>Login here</Text>
+                    <Text style={styles.title}>MedSync</Text>
                     <Text style={styles.subtitle}>
                         Welcome back you've{"\n"}been missed!
                     </Text>
