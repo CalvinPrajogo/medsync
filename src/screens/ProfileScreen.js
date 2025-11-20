@@ -7,13 +7,45 @@ import {
     TouchableOpacity,
     ScrollView,
     Image,
+    Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SIZES } from "../constants/theme";
+import { useAuth } from "../context/AuthContext";
 
 const ProfileScreen = ({ navigation }) => {
+    const { logout, user } = useAuth();
+
+    const handleLogout = async () => {
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to logout?",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                },
+                {
+                    text: "Logout",
+                    style: "destructive",
+                    onPress: async () => {
+                        const result = await logout();
+                        if (result.success) {
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Login' }],
+                            });
+                        } else {
+                            Alert.alert("Error", result.message);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const menuItems = [
         { icon: "package-variant", label: "My Orders" },
         { icon: "bookmark-outline", label: "My Wishlist" },
@@ -78,10 +110,10 @@ const ProfileScreen = ({ navigation }) => {
                             />
                         </View>
                         <View style={styles.profileInfo}>
-                            <Text style={styles.profileName}>Name</Text>
-                            <Text style={styles.profileEmail}>name@gmail.com</Text>
+                            <Text style={styles.profileName}>{user?.displayName || 'User'}</Text>
+                            <Text style={styles.profileEmail}>{user?.email || 'email@example.com'}</Text>
                             <Text style={styles.profileDate}>
-                                Registered Since Nov 2025
+                                Registered Since {user?.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Nov 2025'}
                             </Text>
                         </View>
                         <TouchableOpacity style={styles.editButton}>
@@ -124,6 +156,11 @@ const ProfileScreen = ({ navigation }) => {
                         key={`action-${index}`}
                         style={styles.menuItem}
                         activeOpacity={0.7}
+                        onPress={() => {
+                            if (item.label === "Log out") {
+                                handleLogout();
+                            }
+                        }}
                     >
                         <MaterialCommunityIcons
                             name={item.icon}

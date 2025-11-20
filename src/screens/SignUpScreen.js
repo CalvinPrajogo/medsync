@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     View,
     Text,
@@ -7,31 +7,52 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
+    Alert,
+    ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/theme";
-import { useState } from 'react';
-import { Alert, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
-const LoginScreen = ({ navigation }) => {
+const SignUpScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const { signup } = useAuth();
 
-    const handleLogin = async () => {
-        if (!email || !password) {
+    const handleSignUp = async () => {
+        // Basic validation
+        if (!email || !password || !confirmPassword) {
             Alert.alert("Error", "Please fill in all fields");
             return;
         }
 
+        if (password !== confirmPassword) {
+            Alert.alert("Error", "Passwords do not match");
+            return;
+        }
+
+        if (password.length < 6) {
+            Alert.alert("Error", "Password must be at least 6 characters");
+            return;
+        }
+
         setLoading(true);
-        const result = await login(email, password);
+        const result = await signup(email, password);
         setLoading(false);
 
         if (result.success) {
-            navigation.navigate("Home");
+            Alert.alert(
+                "Success", 
+                "Account created successfully!",
+                [
+                    {
+                        text: "OK",
+                        onPress: () => navigation.navigate("Home")
+                    }
+                ]
+            );
         } else {
             Alert.alert("Error", result.message);
         }
@@ -45,9 +66,9 @@ const LoginScreen = ({ navigation }) => {
             >
                 <View style={styles.content}>
                     {/* Header */}
-                    <Text style={styles.title}>MedSync</Text>
+                    <Text style={styles.title}>Create Account</Text>
                     <Text style={styles.subtitle}>
-                        Welcome back you've{"\n"}been missed!
+                        Create an account so you can{"\n"}manage your medications
                     </Text>
 
                     {/* Email Input */}
@@ -71,30 +92,33 @@ const LoginScreen = ({ navigation }) => {
                         secureTextEntry
                     />
 
-                    {/* Forgot Password */}
-                    <TouchableOpacity>
-                        <Text style={styles.forgotPassword}>
-                            Forgot your password?
-                        </Text>
-                    </TouchableOpacity>
+                    {/* Confirm Password Input */}
+                    <TextInput
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        style={styles.input}
+                        placeholder="Confirm Password"
+                        placeholderTextColor="#9CA3AF"
+                        secureTextEntry
+                    />
 
-                    {/* Sign In Button */}
+                    {/* Sign Up Button */}
                     <TouchableOpacity
-                        style={styles.signInButton}
-                        onPress={handleLogin}
+                        style={styles.signUpButton}
+                        onPress={handleSignUp}
                         disabled={loading}
                     >
                         {loading ? (
                             <ActivityIndicator color={COLORS.white} />
                         ) : (
-                            <Text style={styles.signInButtonText}>Sign in</Text>
+                            <Text style={styles.signUpButtonText}>Sign up</Text>
                         )}
                     </TouchableOpacity>
 
-                    {/* Create Account */}
-                    <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-                        <Text style={styles.createAccount}>
-                            Create new account
+                    {/* Already Have Account */}
+                    <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                        <Text style={styles.loginText}>
+                            Already have an account? <Text style={styles.loginLink}>Login</Text>
                         </Text>
                     </TouchableOpacity>
 
@@ -140,12 +164,12 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     subtitle: {
-        fontSize: 20,
-        fontWeight: "600",
+        fontSize: 18,
+        fontWeight: "500",
         color: "#000",
         textAlign: "center",
         marginBottom: 40,
-        lineHeight: 28,
+        lineHeight: 26,
     },
     input: {
         backgroundColor: "#F1F4FF",
@@ -156,30 +180,29 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: COLORS.primary,
     },
-    forgotPassword: {
-        color: COLORS.primary,
-        textAlign: "right",
-        fontSize: 14,
-        marginBottom: 24,
-    },
-    signInButton: {
+    signUpButton: {
         backgroundColor: COLORS.primary,
         borderRadius: 10,
         padding: 18,
         alignItems: "center",
+        marginTop: 8,
         marginBottom: 24,
     },
-    signInButtonText: {
+    signUpButtonText: {
         color: COLORS.white,
         fontSize: 18,
         fontWeight: "600",
     },
-    createAccount: {
+    loginText: {
         color: "#000",
         textAlign: "center",
         fontSize: 14,
-        fontWeight: "600",
+        fontWeight: "500",
         marginBottom: 32,
+    },
+    loginLink: {
+        color: COLORS.primary,
+        fontWeight: "600",
     },
     orText: {
         color: COLORS.primary,
@@ -207,4 +230,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default LoginScreen;
+export default SignUpScreen;
