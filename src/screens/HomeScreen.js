@@ -5,6 +5,7 @@ import {
     StyleSheet,
     StatusBar,
     TouchableOpacity,
+    ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -32,7 +33,11 @@ const HomeScreen = ({ navigation }) => {
             </View>
 
             {/* Main content */}
-            <View style={styles.content}>
+            <ScrollView 
+                style={styles.scrollView}
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+            >
                 <Text style={styles.title}>Dashboard</Text>
                 <Text style={styles.subtitle}>
                     Manage your medications easily
@@ -124,8 +129,31 @@ const HomeScreen = ({ navigation }) => {
                             </View>
                         </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => navigation.navigate("InteractionChecker")}
+                    >
+                        <View style={styles.cardContent}>
+                            <View style={styles.cardTextContainer}>
+                                <Text style={styles.cardTitle}>
+                                    Check Drug Interactions
+                                </Text>
+                                <Text style={styles.cardSubtitle}>
+                                    Verify if your drugs interact{"\n"} with each otherbefore taking medications
+                                </Text>
+                            </View>
+                            <View style={styles.iconCircle}>
+                                <MaterialCommunityIcons
+                                    name="alert-circle"
+                                    size={36}
+                                    color="white"
+                                />
+                            </View>
+                        </View>
+                    </TouchableOpacity>
                 </View>
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -158,10 +186,13 @@ const styles = StyleSheet.create({
     iconText: {
         fontSize: 24,
     },
-    content: {
+    scrollView: {
         flex: 1,
+    },
+    content: {
         paddingHorizontal: SIZES.padding,
         paddingTop: 40,
+        paddingBottom: 40,
     },
     title: {
         fontSize: 48,
