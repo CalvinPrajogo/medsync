@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     View,
     Text,
@@ -11,17 +11,30 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { initDatabase, seedInteractions } from "../services/database";
-import { checkInteractions } from "../services/interactionService";
+import { InteractionCheckerViewModel } from "../viewmodels/InteractionCheckerViewModel";
 import { useSchedule } from "../context/ScheduleContext";
 import { COLORS, SIZES } from "../constants/theme";
 
 const InteractionCheckerScreen = ({ navigation }) => {
+    const { scheduledMedicines } = useSchedule();
+    const viewModelRef = useRef(null);
+    
+    // Initialize ViewModel
+    if (!viewModelRef.current) {
+        viewModelRef.current = new InteractionCheckerViewModel({ scheduledMedicines });
+    }
+    const viewModel = viewModelRef.current;
+
+    // Update ViewModel's schedule context reference
+    useEffect(() => {
+        viewModel.updateScheduleContext({ scheduledMedicines });
+    }, [scheduledMedicines]);
+
+    // Local state for UI updates
     const [drugList, setDrugList] = useState("");
     const [results, setResults] = useState(null);
     const [loading, setLoading] = useState(false);
     const [dbInitialized, setDbInitialized] = useState(false);
-    const { scheduledMedicines } = useSchedule();
 
     useEffect(() => {
         initializeDB();
@@ -29,82 +42,46 @@ const InteractionCheckerScreen = ({ navigation }) => {
 
     const initializeDB = async () => {
         try {
-            await initDatabase();
-            await seedInteractions();
-            setDbInitialized(true);
+            await viewModel.initializeDatabase();
+            setDbInitialized(viewModel.isDbInitialized());
         } catch (error) {
             console.error("Failed to initialize database:", error);
-            Alert.alert("Error", "Failed to initialize database");
+            Alert.alert("Error", error.message || "Failed to initialize database");
         }
     };
 
     const handleImportFromSchedule = () => {
-        if (scheduledMedicines.length === 0) {
-            Alert.alert(
-                "No Medicines",
-                "You don't have any medicines in your schedule yet. Add medicines to your schedule first."
-            );
-            return;
+        try {
+            const count = viewModel.importFromSchedule();
+            setDrugList(viewModel.getDrugList());
+            setResults(null);
+            Alert.alert("Imported", `Imported ${count} medicine(s) from your schedule`);
+        } catch (error) {
+            Alert.alert("Error", error.message);
         }
-
-        // Extract medicine names from schedule
-        const medicineNames = scheduledMedicines
-            .map((medicine) => medicine.name)
-            .filter((name) => name && name.trim().length > 0);
-
-        if (medicineNames.length === 0) {
-            Alert.alert("Error", "No valid medicine names found in schedule");
-            return;
-        }
-
-        // Set the drug list with medicine names
-        setDrugList(medicineNames.join(", "));
-        setResults(null); // Clear previous results
-
-        Alert.alert(
-            "Imported",
-            `Imported ${medicineNames.length} medicine(s) from your schedule`
-        );
     };
 
     const handleCheckInteractions = async () => {
-        if (!drugList.trim()) {
-            Alert.alert("Error", "Please enter at least one drug name");
-            return;
-        }
-
-        if (!dbInitialized) {
-            Alert.alert("Error", "Database not initialized. Please wait...");
-            return;
-        }
-
-        setLoading(true);
-        setResults(null);
-
-        // Parse drug list (split by comma, newline, or space)
-        const drugs = drugList
-            .split(/[,\n]/)
-            .map((drug) => drug.trim())
-            .filter((drug) => drug.length > 0);
-
-        if (drugs.length < 2) {
-            Alert.alert("Error", "Please enter at least 2 drugs to check for interactions");
-            setLoading(false);
-            return;
-        }
-
+        viewModel.setDrugList(drugList);
+        
         try {
-            const result = await checkInteractions(drugs);
-            setResults(result);
+            await viewModel.checkInteractions();
+            setResults(viewModel.getResults());
+            setLoading(viewModel.isLoading());
         } catch (error) {
-            Alert.alert("Error", "Failed to check interactions");
+            Alert.alert("Error", error.message || "Failed to check interactions");
             console.error(error);
         } finally {
-            setLoading(false);
+            setLoading(viewModel.isLoading());
         }
     };
 
     const getSeverityColor = (severity) => {
+        // Use the model's method if available, otherwise fallback
+        if (results?.interactions?.[0]?.getSeverityColor) {
+            return results.interactions[0].getSeverityColor();
+        }
+        // Fallback to direct method
         switch (severity?.toLowerCase()) {
             case "major":
                 return "#FF3B30";
@@ -118,6 +95,11 @@ const InteractionCheckerScreen = ({ navigation }) => {
     };
 
     const getSeverityLabel = (severity) => {
+        // Use the model's method if available, otherwise fallback
+        if (results?.interactions?.[0]?.getSeverityLabel) {
+            return results.interactions[0].getSeverityLabel();
+        }
+        // Fallback to direct method
         switch (severity?.toLowerCase()) {
             case "major":
                 return "Major";
@@ -169,7 +151,7 @@ const InteractionCheckerScreen = ({ navigation }) => {
                 <View style={styles.inputSection}>
                     <View style={styles.labelRow}>
                         <Text style={styles.label}>Drug Names</Text>
-                        {scheduledMedicines.length > 0 && (
+                        {viewModel.getScheduleCount() > 0 && (
                             <TouchableOpacity
                                 style={styles.importButton}
                                 onPress={handleImportFromSchedule}
@@ -180,7 +162,7 @@ const InteractionCheckerScreen = ({ navigation }) => {
                                     color={COLORS.primary}
                                 />
                                 <Text style={styles.importButtonText}>
-                                    Import from Schedule ({scheduledMedicines.length})
+                                    Import from Schedule ({viewModel.getScheduleCount()})
                                 </Text>
                             </TouchableOpacity>
                         )}
@@ -229,27 +211,34 @@ const InteractionCheckerScreen = ({ navigation }) => {
 
                         {results.hasInteractions && (
                             <View style={styles.interactionsList}>
-                                {results.interactions.map((interaction, index) => (
-                                    <View key={index} style={styles.interactionCard}>
-                                        <View style={styles.interactionHeader}>
-                                            <Text style={styles.drugPair}>
-                                                {interaction.drugA} + {interaction.drugB}
-                                            </Text>
-                                            <View
-                                                style={[
-                                                    styles.severityBadge,
-                                                    {
-                                                        backgroundColor: getSeverityColor(
-                                                            interaction.severity
-                                                        ),
-                                                    },
-                                                ]}
-                                            >
-                                                <Text style={styles.severityText}>
-                                                    {getSeverityLabel(interaction.severity)}
+                                {results.interactions.map((interaction, index) => {
+                                    // Use model methods if available
+                                    const severityColor = interaction.getSeverityColor 
+                                        ? interaction.getSeverityColor() 
+                                        : getSeverityColor(interaction.severity);
+                                    const severityLabel = interaction.getSeverityLabel 
+                                        ? interaction.getSeverityLabel() 
+                                        : getSeverityLabel(interaction.severity);
+                                    
+                                    return (
+                                        <View key={index} style={styles.interactionCard}>
+                                            <View style={styles.interactionHeader}>
+                                                <Text style={styles.drugPair}>
+                                                    {interaction.drugA} + {interaction.drugB}
                                                 </Text>
+                                                <View
+                                                    style={[
+                                                        styles.severityBadge,
+                                                        {
+                                                            backgroundColor: severityColor,
+                                                        },
+                                                    ]}
+                                                >
+                                                    <Text style={styles.severityText}>
+                                                        {severityLabel}
+                                                    </Text>
+                                                </View>
                                             </View>
-                                        </View>
                                         <Text style={styles.description}>
                                             {interaction.description}
                                         </Text>
@@ -264,7 +253,8 @@ const InteractionCheckerScreen = ({ navigation }) => {
                                             </View>
                                         )}
                                     </View>
-                                ))}
+                                    );
+                                })}
                             </View>
                         )}
 
