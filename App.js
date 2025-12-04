@@ -13,13 +13,16 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import { ScheduleProvider } from "./src/context/ScheduleContext";
 import { AuthProvider } from "./src/context/AuthContext";
 import { AdherenceProvider } from "./src/context/AdherenceContext";
+import { FamilyProvider } from "./src/context/FamilyContext";
 
 export default function App() {
     return (
         <AuthProvider>
             <AdherenceProvider>
                 <ScheduleProvider>
-                    <AppNavigator />
+                    <FamilyProvider>
+                        <AppNavigator />
+                    </FamilyProvider>
                 </ScheduleProvider>
             </AdherenceProvider>
         </AuthProvider>
