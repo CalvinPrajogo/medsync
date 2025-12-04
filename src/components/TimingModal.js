@@ -542,7 +542,7 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
                            onPress={handleNext}
                        >
                            <Text style={styles.nextButtonText}>
-                               {step === 4 ? "Add to Schedule" : "Next"}
+                               {step === 5 ? "Add to Schedule" : "Next"}
                            </Text>
                        </TouchableOpacity>
                    </View>
