@@ -7,6 +7,7 @@ import {
    TouchableOpacity,
    ScrollView,
    Platform,
+   TextInput,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { COLORS, SIZES } from "../constants/theme";
@@ -22,6 +23,8 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
    const [doseTimes, setDoseTimes] = useState([new Date()]);
    const [showTimePicker, setShowTimePicker] = useState(false);
    const [currentTimeIndex, setCurrentTimeIndex] = useState(0);
+   const [pillsRemaining, setPillsRemaining] = useState("");
+   const [totalPills, setTotalPills] = useState("");
 
 
    const frequencyOptions = [
@@ -73,8 +76,15 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
            nextDoseDate,
            doseTimes,
        };
-       onConfirm(schedule);
-       setStep(1); 
+       const inventory = {
+           pillsRemaining: parseInt(pillsRemaining) || 0,
+           totalPills: parseInt(totalPills) || 0,
+           lastUpdated: new Date().toISOString(),
+       };
+       onConfirm(schedule, inventory);
+       setStep(1);
+       setPillsRemaining("");
+       setTotalPills("");
    };
 
    const handleClose = () => {
@@ -100,7 +110,7 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
 
 
    const handleNext = () => {
-       if (step < 4) {
+       if (step < 5) {
            setStep(step + 1);
        } else {
            handleConfirm();
@@ -399,6 +409,65 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
                        </View>
                    );
 
+               case 5:
+                   return (
+                       <View>
+                           <Text style={styles.stepTitle}>
+                               Track your pill inventory (optional)
+                           </Text>
+                           <Text style={styles.stepSubtitle}>
+                               Help us remind you when you're running low
+                           </Text>
+                           
+                           <View style={styles.inventoryContainer}>
+                               <View style={styles.inputGroup}>
+                                   <Text style={styles.inputLabel}>
+                                       <MaterialCommunityIcons name="pill" size={16} color={COLORS.primary} />
+                                       {" "}Pills Remaining
+                                   </Text>
+                                   <TextInput
+                                       style={styles.inventoryInput}
+                                       value={pillsRemaining}
+                                       onChangeText={setPillsRemaining}
+                                       placeholder="e.g., 30"
+                                       keyboardType="number-pad"
+                                       placeholderTextColor="#999"
+                                   />
+                               </View>
+
+                               <View style={styles.inputGroup}>
+                                   <Text style={styles.inputLabel}>
+                                       <MaterialCommunityIcons name="package-variant" size={16} color={COLORS.primary} />
+                                       {" "}Total in Bottle
+                                   </Text>
+                                   <TextInput
+                                       style={styles.inventoryInput}
+                                       value={totalPills}
+                                       onChangeText={setTotalPills}
+                                       placeholder="e.g., 60"
+                                       keyboardType="number-pad"
+                                       placeholderTextColor="#999"
+                                   />
+                               </View>
+
+                               {pillsRemaining && parseInt(pillsRemaining) > 0 && (
+                                   <View style={styles.inventoryPreview}>
+                                       <MaterialCommunityIcons
+                                           name="information-outline"
+                                           size={18}
+                                           color={COLORS.primary}
+                                       />
+                                       <Text style={styles.previewText}>
+                                           {parseInt(pillsRemaining) <= 7
+                                               ? "You'll get a refill reminder soon!"
+                                               : `About ${Math.floor(parseInt(pillsRemaining) / (dosesPerDay || 1))} days of supply`}
+                                       </Text>
+                                   </View>
+                               )}
+                           </View>
+                       </View>
+                   );
+
 
            default:
                return null;
@@ -619,6 +688,48 @@ const styles = StyleSheet.create({
        fontSize: 16,
        fontWeight: "600",
        color: "#000",
+   },
+   inventoryContainer: {
+       gap: 16,
+   },
+   inputGroup: {
+       gap: 8,
+   },
+   inputLabel: {
+       fontSize: 14,
+       fontWeight: "600",
+       color: "#333",
+       flexDirection: "row",
+       alignItems: "center",
+   },
+   inventoryInput: {
+       backgroundColor: "#F5F5F7",
+       borderRadius: 12,
+       padding: 16,
+       fontSize: 16,
+       borderWidth: 1,
+       borderColor: "#E0E0E0",
+       color: "#000",
+   },
+   stepSubtitle: {
+       fontSize: 14,
+       color: "#666",
+       marginBottom: 20,
+       marginTop: -8,
+   },
+   inventoryPreview: {
+       flexDirection: "row",
+       alignItems: "center",
+       gap: 8,
+       padding: 12,
+       backgroundColor: "#F0EBFF",
+       borderRadius: 8,
+       marginTop: 8,
+   },
+   previewText: {
+       fontSize: 13,
+       color: COLORS.primary,
+       flex: 1,
    },
    buttonContainer: {
        flexDirection: "row",
