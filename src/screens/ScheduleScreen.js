@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
    View,
    Text,
@@ -12,10 +12,33 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSchedule } from "../context/ScheduleContext";
+import { useAdherence } from "../context/AdherenceContext";
 
 
 const ScheduleScreen = ({ navigation }) => {
-   const { scheduledMedicines, removeFromSchedule } = useSchedule();
+   const { scheduledMedicines, removeFromSchedule, decrementPill } = useSchedule();
+   const { markMedicationTaken } = useAdherence();
+   const [takenMedications, setTakenMedications] = useState({});
+
+   const handleMarkTaken = (medicineId, time) => {
+       const today = new Date().toISOString().split('T')[0];
+       const key = `${medicineId}-${time}`;
+       
+       // Toggle taken status
+       const newStatus = !takenMedications[key];
+       setTakenMedications(prev => ({
+           ...prev,
+           [key]: newStatus
+       }));
+       
+       // Mark in adherence context
+       markMedicationTaken(medicineId, today, time, newStatus);
+       
+       // Decrement pill count if marking as taken
+       if (newStatus) {
+           decrementPill(medicineId);
+       }
+   };
 
 
    const formatFrequency = (frequency) => {
@@ -86,16 +109,46 @@ const ScheduleScreen = ({ navigation }) => {
    const renderScheduleCard = ({ item }) => {
        const timing = item.timing || {};
        const doseTimes = timing.doseTimes || [];
+       const inventory = item.inventory || {};
+       const pillsRemaining = inventory.pillsRemaining || 0;
+       const totalPills = inventory.totalPills || 0;
+       const showRefillWarning = pillsRemaining > 0 && pillsRemaining <= 7;
       
        return (
            <View style={styles.scheduleCard}>
+               {/* Refill Warning Banner */}
+               {showRefillWarning && (
+                   <View style={styles.refillWarning}>
+                       <MaterialCommunityIcons
+                           name="alert-circle"
+                           size={18}
+                           color="#FF9500"
+                       />
+                       <Text style={styles.refillWarningText}>
+                           Low supply: {pillsRemaining} pill{pillsRemaining !== 1 ? 's' : ''} remaining
+                       </Text>
+                   </View>
+               )}
+               
                <View style={styles.cardContent}>
                    <View style={styles.medicineInfo}>
                        <View style={styles.nameRow}>
                            <Text style={styles.medicineName}>{item.name}</Text>
                        </View>
 
-
+                       {/* Inventory Display */}
+                       {totalPills > 0 && (
+                           <View style={styles.inventoryDisplay}>
+                               <MaterialCommunityIcons
+                                   name="pill"
+                                   size={14}
+                                   color="#666"
+                               />
+                               <Text style={styles.inventoryText}>
+                                   {pillsRemaining} / {totalPills} pills
+                               </Text>
+                           </View>
+                       )}
                       
                        {timing.frequency && (
                            <View style={styles.timingContainer}>
@@ -135,18 +188,32 @@ const ScheduleScreen = ({ navigation }) => {
                                            <Text style={styles.doseTimesLabel}>Daily times:</Text>
                                        </View>
                                        <View style={styles.timeChips}>
-                                           {doseTimes.map((time, index) => (
-                                               <View key={index} style={styles.timeChip}>
-                                                   <MaterialCommunityIcons
-                                                       name="clock-outline"
-                                                       size={12}
-                                                       color={COLORS.primary}
-                                                   />
-                                                   <Text style={styles.timeChipText}>
-                                                       {formatTime(time)}
-                                                   </Text>
-                                               </View>
-                                           ))}
+                                           {doseTimes.map((time, index) => {
+                                               const key = `${item.id}-${time}`;
+                                               const isTaken = takenMedications[key];
+                                               return (
+                                                   <TouchableOpacity
+                                                       key={index}
+                                                       style={[
+                                                           styles.timeChip,
+                                                           isTaken && styles.timeChipTaken
+                                                       ]}
+                                                       onPress={() => handleMarkTaken(item.id, time)}
+                                                   >
+                                                       <MaterialCommunityIcons
+                                                           name={isTaken ? "check-circle" : "clock-outline"}
+                                                           size={12}
+                                                           color={isTaken ? COLORS.white : COLORS.primary}
+                                                       />
+                                                       <Text style={[
+                                                           styles.timeChipText,
+                                                           isTaken && styles.timeChipTextTaken
+                                                       ]}>
+                                                           {formatTime(time)}
+                                                       </Text>
+                                                   </TouchableOpacity>
+                                               );
+                                           })}
                                        </View>
                                    </View>
                                )}
@@ -382,11 +449,45 @@ const styles = StyleSheet.create({
        borderWidth: 1,
        borderColor: "#E0E0E0",
    },
+   timeChipTaken: {
+       backgroundColor: COLORS.primary,
+       borderColor: COLORS.primary,
+   },
    timeChipText: {
        fontSize: 12,
        fontWeight: "600",
        color: "#333",
        marginLeft: 4,
+   },
+   timeChipTextTaken: {
+       color: COLORS.white,
+   },
+   refillWarning: {
+       flexDirection: "row",
+       alignItems: "center",
+       backgroundColor: "#FFF3CD",
+       paddingHorizontal: 12,
+       paddingVertical: 8,
+       borderTopLeftRadius: 16,
+       borderTopRightRadius: 16,
+       gap: 8,
+   },
+   refillWarningText: {
+       fontSize: 13,
+       fontWeight: "600",
+       color: "#856404",
+       flex: 1,
+   },
+   inventoryDisplay: {
+       flexDirection: "row",
+       alignItems: "center",
+       marginBottom: 8,
+       gap: 6,
+   },
+   inventoryText: {
+       fontSize: 13,
+       color: "#666",
+       fontWeight: "500",
    },
    removeButton: {
        padding: 4,

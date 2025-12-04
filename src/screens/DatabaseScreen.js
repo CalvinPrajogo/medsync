@@ -291,10 +291,10 @@ const DatabaseScreen = ({ navigation }) => {
   };
 
 
-   const handleConfirmTiming = async (timing) => {
-       if (selectedMedicine) {
-           addToSchedule(selectedMedicine, timing);
-           let totalScheduled = 0;
+    const handleConfirmTiming = async (timing, inventory) => {
+        if (selectedMedicine) {
+            addToSchedule(selectedMedicine, timing, inventory);
+            let totalScheduled = 0;
            try {
                const { frequency, nextDoseDate, doseTimes = [] } = timing || {};
 
