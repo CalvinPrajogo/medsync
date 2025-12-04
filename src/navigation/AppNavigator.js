@@ -1,6 +1,8 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useAuth } from "../context/AuthContext";
+import LoadingScreen from "../screens/LoadingScreen";
 import LoginScreen from "../screens/LoginScreen";
 import SignUpScreen from "../screens/SignUpScreen";
 import HomeScreen from "../screens/HomeScreen";
@@ -16,10 +18,23 @@ import InteractionCheckerScreen from "../screens/InteractionCheckerScreen";
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
+    const { user, loading } = useAuth();
+
+    // Show loading screen while checking auth state
+    if (loading) {
+        return (
+            <NavigationContainer>
+                <Stack.Navigator screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="Loading" component={LoadingScreen} />
+                </Stack.Navigator>
+            </NavigationContainer>
+        );
+    }
+
     return (
         <NavigationContainer>
             <Stack.Navigator
-                initialRouteName="Login" 
+                initialRouteName={user ? "Home" : "Login"} 
                 screenOptions={{
                     headerShown: false,
                 }}
