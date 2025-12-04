@@ -19,6 +19,93 @@ export const FamilyProvider = ({ children }) => {
         loadFamilyData();
     }, []);
 
+    /**
+     * Load demo data (for testing)
+     */
+    const loadDemoData = async () => {
+        const currentUserMember = {
+            id: user?.uid || user?.email || "current-user",
+            name: user?.displayName || user?.email?.split("@")[0] || "You",
+            email: user?.email || "",
+            role: "self",
+            avatar: null,
+            createdAt: new Date().toISOString(),
+        };
+        
+        const demoMembers = [
+            currentUserMember,
+            {
+                id: "demo-member-1",
+                name: "Sarah Johnson",
+                email: "sarah.johnson@example.com",
+                role: "spouse",
+                avatar: null,
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: "demo-member-2",
+                name: "Emma Johnson",
+                email: "",
+                role: "child",
+                avatar: null,
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: "demo-member-3",
+                name: "Robert Johnson",
+                email: "robert.johnson@example.com",
+                role: "elder",
+                avatar: null,
+                createdAt: new Date().toISOString(),
+            },
+        ];
+        
+        const currentUserId = user?.uid || user?.email || "current-user";
+        const demoRelationships = [
+            {
+                id: "demo-rel-1",
+                patientId: "demo-member-2", // Emma (child)
+                caregiverId: currentUserId, // Current user is caregiver
+                permissions: {
+                    viewSchedule: true,
+                    viewAdherence: true,
+                    manageSchedule: true,
+                    manageMedications: true,
+                },
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: "demo-rel-2",
+                patientId: "demo-member-3", // Robert (elder)
+                caregiverId: currentUserId, // Current user is caregiver
+                permissions: {
+                    viewSchedule: true,
+                    viewAdherence: true,
+                    manageSchedule: false,
+                    manageMedications: false,
+                },
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: "demo-rel-3",
+                patientId: "demo-member-1", // Sarah (spouse)
+                caregiverId: "demo-member-3", // Robert is caregiver for Sarah
+                permissions: {
+                    viewSchedule: true,
+                    viewAdherence: true,
+                    manageSchedule: false,
+                    manageMedications: false,
+                },
+                createdAt: new Date().toISOString(),
+            },
+        ];
+        
+        setFamilyMembers(demoMembers);
+        setCaregiverRelationships(demoRelationships);
+        await saveFamilyData(demoMembers);
+        await saveCaregiverData(demoRelationships);
+    };
+
     const loadFamilyData = async () => {
         try {
             const [familyData, caregiverData] = await Promise.all([
@@ -29,21 +116,17 @@ export const FamilyProvider = ({ children }) => {
             if (familyData) {
                 setFamilyMembers(JSON.parse(familyData));
             } else {
-                // Initialize with current user as first member
-                const currentUserMember = {
-                    id: user?.uid || user?.email || "current-user",
-                    name: user?.displayName || user?.email?.split("@")[0] || "You",
-                    email: user?.email || "",
-                    role: "self",
-                    avatar: null,
-                    createdAt: new Date().toISOString(),
-                };
-                setFamilyMembers([currentUserMember]);
-                await saveFamilyData([currentUserMember]);
+                // Load demo data on first launch
+                await loadDemoData();
             }
 
             if (caregiverData) {
-                setCaregiverRelationships(JSON.parse(caregiverData));
+                const parsed = JSON.parse(caregiverData);
+                setCaregiverRelationships(parsed);
+                console.log("Loaded caregiver relationships:", parsed);
+            } else {
+                // Load demo data if no caregiver data exists
+                await loadDemoData();
             }
         } catch (error) {
             console.error("Error loading family data:", error);
@@ -186,6 +269,21 @@ export const FamilyProvider = ({ children }) => {
         }).filter(Boolean);
     };
 
+    /**
+     * Get all caregiver relationships (for display)
+     */
+    const getAllCaregiverRelationships = () => {
+        return caregiverRelationships.map((rel) => {
+            const patient = familyMembers.find((m) => m.id === rel.patientId);
+            const caregiver = familyMembers.find((m) => m.id === rel.caregiverId);
+            return {
+                ...rel,
+                patient,
+                caregiver,
+            };
+        }).filter((rel) => rel.patient && rel.caregiver);
+    };
+
     const value = {
         familyMembers,
         caregiverRelationships,
@@ -200,6 +298,8 @@ export const FamilyProvider = ({ children }) => {
         isCaregiverFor,
         getPatientsForCaregiver,
         getCaregiversForPatient,
+        getAllCaregiverRelationships,
+        loadDemoData,
     };
 
     return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;

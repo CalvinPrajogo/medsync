@@ -30,6 +30,8 @@ const FamilyCaregiverScreen = ({ navigation }) => {
         getPatientsForCaregiver,
         getCaregiversForPatient,
         isCaregiverFor,
+        getAllCaregiverRelationships,
+        loadDemoData,
     } = useFamily();
     const { scheduledMedicines } = useSchedule();
     const { calculateAdherence, getAdherenceForDate } = useAdherence();
@@ -208,8 +210,18 @@ const FamilyCaregiverScreen = ({ navigation }) => {
     };
 
     const renderCaregiverCard = ({ item }) => {
-        const patient = familyMembers.find((m) => m.id === item.patientId);
-        if (!patient) return null;
+        // Handle both direct relationship objects and objects with patient/caregiver
+        const patient = item.patient || familyMembers.find((m) => m.id === item.patientId);
+        const caregiver = item.caregiver || familyMembers.find((m) => m.id === item.caregiverId);
+        
+        if (!patient || !caregiver) {
+            console.log("Missing patient or caregiver:", { item, patient, caregiver });
+            return null;
+        }
+
+        const currentUser = familyMembers.find(m => m.role === "self");
+        const currentUserId = currentUser?.id;
+        const isCurrentUserCaregiver = item.caregiverId === currentUserId || caregiver?.id === currentUserId;
 
         return (
             <View style={styles.caregiverCard}>
@@ -221,10 +233,15 @@ const FamilyCaregiverScreen = ({ navigation }) => {
                     </View>
                     <View style={styles.caregiverInfo}>
                         <Text style={styles.caregiverName}>
-                            Caring for: {patient.name}
+                            {isCurrentUserCaregiver 
+                                ? `Caring for: ${patient.name}`
+                                : `${caregiver.name} → ${patient.name}`}
+                        </Text>
+                        <Text style={styles.caregiverRole}>
+                            {patient.role === "self" ? "You" : patient.role}
                         </Text>
                         <Text style={styles.caregiverPermissions}>
-                            {item.permissions.manageSchedule
+                            {item.permissions?.manageSchedule
                                 ? "Full Access"
                                 : "View Only"}
                         </Text>
@@ -240,15 +257,17 @@ const FamilyCaregiverScreen = ({ navigation }) => {
                         />
                     </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                    style={styles.viewScheduleButton}
-                    onPress={() => {
-                        setSelectedMember(patient);
-                        navigation.navigate("Schedule");
-                    }}
-                >
-                    <Text style={styles.viewScheduleText}>View Schedule</Text>
-                </TouchableOpacity>
+                {isCurrentUserCaregiver && (
+                    <TouchableOpacity
+                        style={styles.viewScheduleButton}
+                        onPress={() => {
+                            setSelectedMember(patient);
+                            navigation.navigate("Schedule");
+                        }}
+                    >
+                        <Text style={styles.viewScheduleText}>View Schedule</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         );
     };
@@ -419,21 +438,40 @@ const FamilyCaregiverScreen = ({ navigation }) => {
 
                 {activeTab === "caregivers" && (
                     <>
-                        <TouchableOpacity
-                            style={styles.addButton}
-                            onPress={() => setShowCaregiverModal(true)}
-                        >
-                            <MaterialCommunityIcons
-                                name="account-plus"
-                                size={24}
-                                color={COLORS.white}
-                            />
-                            <Text style={styles.addButtonText}>
-                                Add Caregiver Access
-                            </Text>
-                        </TouchableOpacity>
+                        <View style={styles.buttonRow}>
+                            <TouchableOpacity
+                                style={[styles.addButton, { flex: 1, marginRight: 8 }]}
+                                onPress={() => setShowCaregiverModal(true)}
+                            >
+                                <MaterialCommunityIcons
+                                    name="account-plus"
+                                    size={20}
+                                    color={COLORS.white}
+                                />
+                                <Text style={styles.addButtonText}>
+                                    Add Caregiver
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.demoButton, { flex: 1, marginLeft: 8 }]}
+                                onPress={async () => {
+                                    await loadDemoData();
+                                    Alert.alert("Success", "Demo data loaded!");
+                                }}
+                            >
+                                <MaterialCommunityIcons
+                                    name="refresh"
+                                    size={20}
+                                    color={COLORS.primary}
+                                />
+                                <Text style={styles.demoButtonText}>
+                                    Load Demo
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
 
-                        {getPatientsForCaregiver().length === 0 ? (
+                        {/* Show all caregiver relationships */}
+                        {getAllCaregiverRelationships().length === 0 ? (
                             <View style={styles.emptyContainer}>
                                 <MaterialCommunityIcons
                                     name="account-heart"
@@ -448,16 +486,36 @@ const FamilyCaregiverScreen = ({ navigation }) => {
                                 </Text>
                             </View>
                         ) : (
-                            <FlatList
-                                data={getPatientsForCaregiver()}
-                                renderItem={({ item }) =>
-                                    renderCaregiverCard({
-                                        item: item.relationship,
-                                    })
-                                }
-                                keyExtractor={(item) => item.relationship.id}
-                                scrollEnabled={false}
-                            />
+                            <>
+                                <Text style={styles.sectionSubtitle}>
+                                    All Caregiver Relationships ({getAllCaregiverRelationships().length})
+                                </Text>
+                                <FlatList
+                                    data={getAllCaregiverRelationships()}
+                                    renderItem={({ item }) => renderCaregiverCard({ item })}
+                                    keyExtractor={(item) => item.id}
+                                    scrollEnabled={false}
+                                />
+                                
+                                {/* Show relationships where current user is caregiver */}
+                                {getPatientsForCaregiver().length > 0 && (
+                                    <>
+                                        <Text style={styles.sectionSubtitle}>
+                                            You are caring for ({getPatientsForCaregiver().length})
+                                        </Text>
+                                        <FlatList
+                                            data={getPatientsForCaregiver()}
+                                            renderItem={({ item }) =>
+                                                renderCaregiverCard({
+                                                    item: item.relationship,
+                                                })
+                                            }
+                                            keyExtractor={(item) => item.relationship.id}
+                                            scrollEnabled={false}
+                                        />
+                                    </>
+                                )}
+                            </>
                         )}
                     </>
                 )}
@@ -487,51 +545,85 @@ const FamilyCaregiverScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
 
+                        <Text style={styles.inputLabel}>
+                            Full Name <Text style={styles.required}>*</Text>
+                        </Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Name"
+                            placeholder="e.g., John Smith or Maria Garcia"
                             value={newMemberName}
                             onChangeText={setNewMemberName}
+                            autoCapitalize="words"
                         />
+                        
+                        <Text style={styles.inputLabel}>
+                            Email Address <Text style={styles.optional}>(optional)</Text>
+                        </Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Email (optional)"
+                            placeholder="e.g., john.smith@example.com"
                             value={newMemberEmail}
                             onChangeText={setNewMemberEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            autoCorrect={false}
                         />
 
                         <View style={styles.roleSelector}>
-                            <Text style={styles.roleLabel}>Role:</Text>
-                            {["patient", "child", "elder", "spouse"].map((role) => (
+                            <Text style={styles.roleLabel}>
+                                Relationship Role <Text style={styles.required}>*</Text>
+                            </Text>
+                            <Text style={styles.roleHint}>
+                                Select the relationship to you
+                            </Text>
+                            {[
+                                { value: "patient", label: "Patient", desc: "General patient" },
+                                { value: "child", label: "Child", desc: "Your child" },
+                                { value: "elder", label: "Elder", desc: "Elderly family member" },
+                                { value: "spouse", label: "Spouse", desc: "Your spouse/partner" },
+                            ].map((role) => (
                                 <TouchableOpacity
-                                    key={role}
+                                    key={role.value}
                                     style={[
                                         styles.roleOption,
-                                        newMemberRole === role &&
+                                        newMemberRole === role.value &&
                                             styles.roleOptionSelected,
                                     ]}
-                                    onPress={() => setNewMemberRole(role)}
+                                    onPress={() => setNewMemberRole(role.value)}
                                 >
-                                    <Text
-                                        style={[
-                                            styles.roleOptionText,
-                                            newMemberRole === role &&
-                                                styles.roleOptionTextSelected,
-                                        ]}
-                                    >
-                                        {role.charAt(0).toUpperCase() + role.slice(1)}
-                                    </Text>
+                                    <View style={styles.roleOptionContent}>
+                                        <Text
+                                            style={[
+                                                styles.roleOptionText,
+                                                newMemberRole === role.value &&
+                                                    styles.roleOptionTextSelected,
+                                            ]}
+                                        >
+                                            {role.label}
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.roleOptionDesc,
+                                                newMemberRole === role.value &&
+                                                    styles.roleOptionDescSelected,
+                                            ]}
+                                        >
+                                            {role.desc}
+                                        </Text>
+                                    </View>
                                 </TouchableOpacity>
                             ))}
                         </View>
 
                         <TouchableOpacity
-                            style={styles.modalButton}
+                            style={[
+                                styles.modalButton,
+                                !newMemberName.trim() && styles.modalButtonDisabled,
+                            ]}
                             onPress={handleAddMember}
+                            disabled={!newMemberName.trim()}
                         >
-                            <Text style={styles.modalButtonText}>Add Member</Text>
+                            <Text style={styles.modalButtonText}>Add Family Member</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -832,9 +924,43 @@ const styles = StyleSheet.create({
         color: "#000",
         marginBottom: 4,
     },
+    caregiverRole: {
+        fontSize: 12,
+        color: "#999",
+        marginBottom: 2,
+        textTransform: "capitalize",
+    },
     caregiverPermissions: {
         fontSize: 12,
         color: "#666",
+        fontWeight: "500",
+    },
+    buttonRow: {
+        flexDirection: "row",
+        marginBottom: 20,
+    },
+    demoButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.white,
+        borderWidth: 2,
+        borderColor: COLORS.primary,
+        paddingVertical: 16,
+        borderRadius: 12,
+        gap: 8,
+    },
+    demoButtonText: {
+        color: COLORS.primary,
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    sectionSubtitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#666",
+        marginTop: 8,
+        marginBottom: 12,
     },
     reportsContainer: {
         gap: 16,
@@ -1023,6 +1149,39 @@ const styles = StyleSheet.create({
     },
     modalButtonDisabled: {
         opacity: 0.5,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#000",
+        marginBottom: 8,
+        marginTop: 4,
+    },
+    required: {
+        color: "#FF3B30",
+    },
+    optional: {
+        fontSize: 12,
+        color: "#999",
+        fontWeight: "400",
+    },
+    roleHint: {
+        fontSize: 12,
+        color: "#666",
+        marginBottom: 12,
+        fontStyle: "italic",
+    },
+    roleOptionContent: {
+        flexDirection: "column",
+        alignItems: "flex-start",
+    },
+    roleOptionDesc: {
+        fontSize: 11,
+        color: "#999",
+        marginTop: 2,
+    },
+    roleOptionDescSelected: {
+        color: "rgba(255, 255, 255, 0.8)",
     },
 });
 
