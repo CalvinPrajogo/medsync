@@ -50,6 +50,23 @@ const MedicationHistoryScreen = ({ navigation }) => {
     const formatDateKey = (date) => {
         return date.toISOString().split("T")[0];
     };
+    
+    const formatTime = (time) => {
+        // If time is already a string (HH:MM format), return it
+        if (typeof time === 'string' && /^\d{1,2}:\d{2}/.test(time)) {
+            return time;
+        }
+        // If time is a Date object or ISO string, format it
+        const timeDate = new Date(time);
+        if (!isNaN(timeDate.getTime())) {
+            return timeDate.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+            });
+        }
+        return time;
+    };
 
     const isToday = (date) => {
         if (!date) return false;
@@ -84,6 +101,89 @@ const MedicationHistoryScreen = ({ navigation }) => {
         if (allTaken) return "complete";
         if (someTaken) return "partial";
         return "missed";
+    };
+    
+    // Get medication status dots for a specific date
+    const getMedicationDots = (date) => {
+        if (!date) return [];
+        
+        const dateStr = formatDateKey(date);
+        const dots = [];
+        const now = new Date();
+        
+        // For each scheduled medication
+        scheduledMedicines.forEach(medicine => {
+            const startDate = medicine.timing?.nextDoseDate ? new Date(medicine.timing.nextDoseDate) : null;
+            if (!startDate) return;
+            
+            // Only show if this date is on or after the medication start date
+            const medicineStartDateStr = formatDateKey(startDate);
+            if (dateStr < medicineStartDateStr) return;
+            
+            const doseTimes = medicine.timing?.doseTimes || [];
+            if (doseTimes.length === 0) return;
+            
+            // Check adherence records for this medication on this date
+            const records = getAdherenceForDate(dateStr);
+            
+            // For each dose time, check if there's a matching record
+            let hasAnyRecord = false;
+            let allTaken = true;
+            let anyMissed = false;
+            
+            doseTimes.forEach(time => {
+                // Normalize time to HH:MM format
+                let timeKey;
+                if (time instanceof Date) {
+                    timeKey = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+                } else if (typeof time === 'string') {
+                    const timeDate = new Date(time);
+                    if (!isNaN(timeDate.getTime())) {
+                        timeKey = `${timeDate.getHours().toString().padStart(2, '0')}:${timeDate.getMinutes().toString().padStart(2, '0')}`;
+                    } else {
+                        timeKey = time;
+                    }
+                }
+                
+                // Find matching record by comparing time strings
+                const record = records.find(r => {
+                    if (r.medicineId.toString() !== medicine.id.toString()) return false;
+                    return r.time === timeKey;
+                });
+                
+                if (record) {
+                    hasAnyRecord = true;
+                    if (!record.taken) {
+                        allTaken = false;
+                        anyMissed = true;
+                    }
+                } else {
+                    // No record - check if this dose time has passed
+                    const doseDateTime = new Date(date);
+                    const [hours, minutes] = timeKey.split(':').map(Number);
+                    doseDateTime.setHours(hours, minutes, 0, 0);
+                    
+                    if (doseDateTime <= now) {
+                        // Dose time has passed without being marked - it's missed
+                        anyMissed = true;
+                        allTaken = false;
+                    }
+                }
+            });
+            
+            if (anyMissed) {
+                // Any doses missed - red dot
+                dots.push("#FF3B30");
+            } else if (hasAnyRecord && allTaken) {
+                // All doses taken - green dot
+                dots.push("#34C759");
+            } else {
+                // Not taken yet but not past due - gray dot
+                dots.push("#999");
+            }
+        });
+        
+        return dots.slice(0, 3); // Show max 3 dots
     };
 
     const changeMonth = (direction) => {
@@ -179,6 +279,7 @@ const MedicationHistoryScreen = ({ navigation }) => {
                     <View style={styles.calendarGrid}>
                         {monthData.map((date, index) => {
                             const status = getDateStatus(date);
+                            const dots = getMedicationDots(date);
                             const today = isToday(date);
                             const selected = isSelectedDate(date);
 
@@ -207,21 +308,16 @@ const MedicationHistoryScreen = ({ navigation }) => {
                                             >
                                                 {date.getDate()}
                                             </Text>
-                                            {status === "complete" && (
-                                                <MaterialCommunityIcons
-                                                    name="check-circle"
-                                                    size={16}
-                                                    color="#FFF"
-                                                    style={styles.statusIcon}
-                                                />
-                                            )}
-                                            {status === "missed" && (
-                                                <MaterialCommunityIcons
-                                                    name="close-circle"
-                                                    size={16}
-                                                    color="#FF3B30"
-                                                    style={styles.statusIcon}
-                                                />
+                                            {/* Show dots for individual medication status */}
+                                            {dots.length > 0 && (
+                                                <View style={styles.dotsContainer}>
+                                                    {dots.map((color, idx) => (
+                                                        <View 
+                                                            key={idx} 
+                                                            style={[styles.dot, { backgroundColor: color }]} 
+                                                        />
+                                                    ))}
+                                                </View>
                                             )}
                                         </>
                                     )}
@@ -241,8 +337,12 @@ const MedicationHistoryScreen = ({ navigation }) => {
                             <Text style={styles.legendText}>Partially Taken</Text>
                         </View>
                         <View style={styles.legendItem}>
-                            <View style={[styles.legendDot, { backgroundColor: "#FFE5E5" }]} />
+                            <View style={[styles.legendDot, { backgroundColor: "#FF3B30" }]} />
                             <Text style={styles.legendText}>Missed</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                            <View style={[styles.legendDot, { backgroundColor: "#999" }]} />
+                            <Text style={styles.legendText}>Scheduled</Text>
                         </View>
                     </View>
                 </View>
@@ -258,7 +358,7 @@ const MedicationHistoryScreen = ({ navigation }) => {
                         })}
                     </Text>
 
-                    {selectedDateRecords.length === 0 ? (
+                    {scheduledMedicines.length === 0 ? (
                         <View style={styles.emptyState}>
                             <MaterialCommunityIcons
                                 name="calendar-blank"
@@ -266,35 +366,89 @@ const MedicationHistoryScreen = ({ navigation }) => {
                                 color="#CCC"
                             />
                             <Text style={styles.emptyText}>
-                                No medication records for this date
+                                No medications scheduled
                             </Text>
                         </View>
                     ) : (
-                        selectedDateRecords.map((record, index) => {
-                            const medicine = scheduledMedicines.find(
-                                (m) => m.id.toString() === record.medicineId.toString()
-                            );
-                            return (
-                                <View key={index} style={styles.recordCard}>
-                                    <View style={styles.recordHeader}>
-                                        <Text style={styles.recordName}>
-                                            {medicine?.name || "Unknown Medicine"}
-                                        </Text>
-                                        <MaterialCommunityIcons
-                                            name={record.taken ? "check-circle" : "close-circle"}
-                                            size={24}
-                                            color={record.taken ? "#34C759" : "#FF3B30"}
-                                        />
-                                    </View>
-                                    <Text style={styles.recordTime}>
-                                        Scheduled: {record.time}
-                                    </Text>
-                                    <Text style={styles.recordStatus}>
-                                        {record.taken ? "Taken" : "Missed"}
-                                    </Text>
-                                </View>
-                            );
-                        })
+                        <>
+                            {scheduledMedicines.map((medicine, medIndex) => {
+                                const doseTimes = medicine.timing?.doseTimes || [];
+                                const dateStr = formatDateKey(selectedDate);
+                                
+                                // Check if selected date is on or after the medication start date
+                                const startDate = medicine.timing?.nextDoseDate ? new Date(medicine.timing.nextDoseDate) : null;
+                                if (!startDate) return null;
+                                
+                                const medicineStartDateStr = formatDateKey(startDate);
+                                if (dateStr < medicineStartDateStr) return null; // Don't show if before start date
+                                
+                                return doseTimes.map((time, timeIndex) => {
+                                    // Normalize time to HH:MM format
+                                    let timeKey;
+                                    if (time instanceof Date) {
+                                        timeKey = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+                                    } else if (typeof time === 'string') {
+                                        const timeDate = new Date(time);
+                                        if (!isNaN(timeDate.getTime())) {
+                                            timeKey = `${timeDate.getHours().toString().padStart(2, '0')}:${timeDate.getMinutes().toString().padStart(2, '0')}`;
+                                        } else {
+                                            timeKey = time;
+                                        }
+                                    }
+                                    
+                                    // Check if this specific dose has a record
+                                    const record = selectedDateRecords.find(r => 
+                                        r.medicineId.toString() === medicine.id.toString() && 
+                                        r.time === timeKey
+                                    );
+                                    
+                                    const isScheduled = !record;
+                                    const isTaken = record?.taken;
+                                    
+                                    return (
+                                        <View 
+                                            key={`${medIndex}-${timeIndex}`} 
+                                            style={[
+                                                styles.recordCard,
+                                                isScheduled && styles.scheduledCard
+                                            ]}
+                                        >
+                                            <View style={styles.recordHeader}>
+                                                <Text style={[
+                                                    styles.recordName,
+                                                    isScheduled && styles.scheduledText
+                                                ]}>
+                                                    {medicine.name}
+                                                </Text>
+                                                <MaterialCommunityIcons
+                                                    name={
+                                                        isScheduled ? "clock-outline" :
+                                                        isTaken ? "check-circle" : "close-circle"
+                                                    }
+                                                    size={24}
+                                                    color={
+                                                        isScheduled ? "#999" :
+                                                        isTaken ? "#34C759" : "#FF3B30"
+                                                    }
+                                                />
+                                            </View>
+                                            <Text style={[
+                                                styles.recordTime,
+                                                isScheduled && styles.scheduledText
+                                            ]}>
+                                                Scheduled: {formatTime(time)}
+                                            </Text>
+                                            <Text style={[
+                                                styles.recordStatus,
+                                                isScheduled && styles.scheduledText
+                                            ]}>
+                                                {isScheduled ? "Not yet taken" : isTaken ? "Taken" : "Missed"}
+                                            </Text>
+                                        </View>
+                                    );
+                                });
+                            })}
+                        </>
                     )}
                 </View>
             </ScrollView>
@@ -435,6 +589,20 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
         fontWeight: "bold",
     },
+    dayTextScheduled: {
+        color: "#999",
+    },
+    dotsContainer: {
+        position: "absolute",
+        bottom: 2,
+        flexDirection: "row",
+        gap: 2,
+    },
+    dot: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+    },
     statusIcon: {
         position: "absolute",
         bottom: 2,
@@ -515,6 +683,15 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "500",
         color: "#666",
+    },
+    scheduledCard: {
+        backgroundColor: "#F9F9F9",
+        borderWidth: 1,
+        borderColor: "#E5E5E5",
+        borderStyle: "dashed",
+    },
+    scheduledText: {
+        color: "#999",
     },
 });
 
