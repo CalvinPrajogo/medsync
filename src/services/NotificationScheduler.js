@@ -53,15 +53,14 @@ export async function scheduleRecurringNotifications({ scheduleId, title, body, 
   if (!rruleString) throw new Error('rruleString is required');
   if (!dtstartIso) throw new Error('dtstartIso is required');
 
-  // Cancel any previously scheduled notifications for this scheduleId
+  // Cancel any previously scheduled notifications 
   await cancelScheduledNotifications(scheduleId);
 
-  // Parse dtstart with luxon to honor timezone if provided
+  // Parse dtstart with luxon 
   const zone = timezone || DateTime.local().zoneName;
   const dtstart = DateTime.fromISO(dtstartIso, { zone });
   if (!dtstart.isValid) throw new Error('Invalid dtstartIso');
 
-  // Build an RRule from the provided string. rrulestr accepts DTSTART as part of options.
   // attach DTSTART with a JS Date in UTC based on the chosen timezone.
   const dtstartUtc = dtstart.toUTC().toJSDate();
 
@@ -75,7 +74,7 @@ export async function scheduleRecurringNotifications({ scheduleId, title, body, 
     rule = rrulestr(rruleString, { dtstart: dtstartUtc });
   }
 
-  // Compute the next N occurrences (in the target timezone) 
+  // Compute the next N occurrences  
   const nextDates = rule.all((date, i) => i < occurrences);
   
 
@@ -88,14 +87,13 @@ export async function scheduleRecurringNotifications({ scheduleId, title, body, 
 
     
 
-    // Skip any occurrences that are in the past (to avoid immediate firing or no-op)
+    // Skip any occurrences that are in the past 
     if (triggerDate.getTime() <= Date.now()) {
       console.warn('[NotificationScheduler] skipping past trigger date', triggerDate);
       continue;
     }
 
     try {
-      // Ensure Android channel exists (no-op on iOS)
       if (Platform.OS === 'android') {
         try {
           await Notifications.setNotificationChannelAsync('medication-reminders', {
@@ -115,7 +113,6 @@ export async function scheduleRecurringNotifications({ scheduleId, title, body, 
         title,
         body,
         data: { scheduleId },
-        // include Android channelId if available so notifications show correctly on Android
         ...(Platform.OS === 'android' ? { channelId: 'medication-reminders' } : {}),
       };
 
@@ -129,13 +126,11 @@ export async function scheduleRecurringNotifications({ scheduleId, title, body, 
     }
   }
 
-  // Persist scheduled ids so we can cancel them later
+  // Persist ids for cancelling 
   await persistNotificationIds(scheduleId, notificationIds);
 
-  // Optionally log scheduled ids for debugging if needed
   try {
     const all = await Notifications.getAllScheduledNotificationsAsync();
-    // No logging in production - kept call to fetch current scheduled list for internal consistency
     void all;
   } catch (e) {
     console.warn('[NotificationScheduler] failed to fetch scheduled notifications', e);

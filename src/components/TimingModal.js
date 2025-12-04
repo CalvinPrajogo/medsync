@@ -37,7 +37,6 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
 
    const handleDosesSelect = (value) => {
        setDosesPerDay(value);
-       // Initialize dose times array based on number of doses
        const times = Array(value)
            .fill(null)
            .map((_, i) => {
@@ -75,28 +74,23 @@ const TimingModal = ({ visible, onClose, onConfirm, medicineName }) => {
            doseTimes,
        };
        onConfirm(schedule);
-       setStep(1); // Reset to first step
+       setStep(1); 
    };
 
    const handleClose = () => {
-       // Reset internal modal state so next open always starts at step 1
        setStep(1);
        setShowDatePicker(false);
        setShowTimePicker(false);
        setCurrentTimeIndex(0);
-       // Optionally reset other values to defaults if desired
-       // Call parent's onClose after resetting
        if (typeof onClose === 'function') onClose();
    };
 
-   // When the modal becomes visible, ensure it starts at step 1 and resets temporary state
    useEffect(() => {
        if (visible) {
            setStep(1);
            setShowDatePicker(false);
            setShowTimePicker(false);
            setCurrentTimeIndex(0);
-           // reset to defaults so repeated opens are consistent
            setFrequency('daily');
            setDosesPerDay(1);
            setNextDoseDate(new Date());

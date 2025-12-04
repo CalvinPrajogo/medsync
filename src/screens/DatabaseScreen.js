@@ -284,7 +284,7 @@ const DatabaseScreen = ({ navigation }) => {
        setTimingModalVisible(true);
    };
 
-  // Ensure modal close always clears selection and hides the modal
+
   const handleModalClose = () => {
       setTimingModalVisible(false);
       setSelectedMedicine(null);
@@ -293,10 +293,7 @@ const DatabaseScreen = ({ navigation }) => {
 
    const handleConfirmTiming = async (timing) => {
        if (selectedMedicine) {
-           // Add the medicine to the schedule (timing stored in context)
            addToSchedule(selectedMedicine, timing);
-
-           // Try to schedule local notifications using the NotificationScheduler
            let totalScheduled = 0;
            try {
                const { frequency, nextDoseDate, doseTimes = [] } = timing || {};

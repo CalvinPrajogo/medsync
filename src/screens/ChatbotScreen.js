@@ -35,7 +35,7 @@ const ChatbotScreen = ({ navigation }) => {
     // Initialize Gemini AI
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const [pendingSchedule, setPendingSchedule] = useState(null); // holds parsed schedule awaiting confirmation
+    const [pendingSchedule, setPendingSchedule] = useState(null); 
     const { addToSchedule } = useSchedule();
 
     useEffect(() => {
@@ -64,18 +64,17 @@ const ChatbotScreen = ({ navigation }) => {
         ]);
 
         try {
-            // Build a prompt that includes recent chat history so the model remembers follow-ups
+            //include recent chat history
             const convo = [...messages, { role: 'user', content: userMessage }];
-            // Keep only the last 10 messages to limit prompt size
             const recent = convo.slice(-10);
             const convoText = recent
                 .map((m) => (m.role === 'user' ? `User: ${m.content}` : `Assistant: ${m.content}`))
                 .join('\n');
 
-            // Create a medical-focused system instruction that instructs the model to output structured JSON when able
+            // Create a medical-focused instruction that instructs the model to output structured JSON 
             const systemInstruction = `You are a concise medical assistant. When the user asks to create a reminder/schedule, you MUST either:\n\n1) Ask a short clarifying question in plain text if any required scheduling fields are missing or ambiguous (do NOT output JSON), OR\n2) Output ONLY a single JSON object (no surrounding explanation) that exactly matches this schema when you can create the schedule.\n\nImportant: The \"title\" field MUST contain ONLY the medication name (for example: \"Lisinopril\" or \"Ibuprofen\") — do NOT include dosage, instructions, frequency, times, or other details in the \"title\". Put dosage or instruction text in the \"body\" field instead.\n\nRequired JSON schema (exact keys):\n{\n  "schedule_id": string | null,          // optional id (or null)\n  "dtstart": "YYYY-MM-DDTHH:MM:SSZ",     // ISO 8601 UTC or with timezone offset\n  "timezone": "America/Los_Angeles",     // IANA timezone name\n  "rrule": "RRULE:FREQ=...;...",         // RFC5545 rrule string\n  "title": "string",\n  "body": "string",\n  "occurrences": integer,\n  "confidence": number,                  // 0.0 - 1.0 confidence score\n  "ambiguous_fields": ["fieldName"]      // empty array if none\n}\n\nIf you produce JSON, output only the JSON object (no markdown, no comments). Example valid output:\n\n{"schedule_id": null, "dtstart":"2025-11-20T08:00:00-08:00","timezone":"America/Los_Angeles","rrule":"RRULE:FREQ=DAILY;INTERVAL=1","title":"Take Lisinopril 10mg","body":"Take one tablet","occurrences":10,"confidence":0.92,"ambiguous_fields":[]}\n\nIf the user asks general medical questions, answer concisely as normal. Keep responses short and helpful.`;
 
-            // Provide current date/time and timezone so the model can resolve relative dates (e.g. "tomorrow", "next Monday")
+            // Provide current date/time 
             const now = DateTime.now();
             const nowIso = now.toISO();
             const nowZone = now.zoneName || "UTC";
@@ -84,8 +83,7 @@ const ChatbotScreen = ({ navigation }) => {
             const result = await model.generateContent(prompt);
             const response = await result.response;
             const text = response.text();
-            // Debug raw assistant text to help diagnose why JSON may not be produced
-            console.debug('[Chatbot] assistant raw text:', text);
+            //Debugging - console.debug('[Chatbot] assistant raw text:', text);
 
             // Try to extract schedule JSON from the assistant text
             const schedule = tryExtractScheduleJSON(text);
@@ -93,7 +91,7 @@ const ChatbotScreen = ({ navigation }) => {
                 // Validate schedule fields before presenting confirmation UI
                 const validation = validateSchedule(schedule);
                 if (!validation.valid) {
-                    // send a clarification/error back to user (do not schedule)
+                    // send a error back to user 
                     setMessages((prev) => [
                         ...prev,
                         {
@@ -102,7 +100,7 @@ const ChatbotScreen = ({ navigation }) => {
                         },
                     ]);
                 } else {
-                    // Present a compact confirmation UI to the user (store pending schedule)
+                    // Send a confirmation to the user 
                     setPendingSchedule(schedule);
                     setMessages((prev) => [
                         ...prev,
@@ -110,7 +108,7 @@ const ChatbotScreen = ({ navigation }) => {
                     ]);
                 }
             } else {
-                // Add assistant response to chat as usual
+                // Add assistant response to chat 
                 setMessages((prev) => [
                     ...prev,
                     { role: "assistant", content: text },
@@ -143,7 +141,6 @@ const ChatbotScreen = ({ navigation }) => {
     // Helper: attempt to extract JSON object from assistant text
     const tryExtractScheduleJSON = (text) => {
         if (!text) return null;
-        // Try to find the first JSON object in the text
         const start = text.indexOf("{");
         const end = text.lastIndexOf("}");
         if (start === -1 || end === -1 || end <= start) return null;
@@ -165,7 +162,6 @@ const ChatbotScreen = ({ navigation }) => {
         try {
             const dt = DateTime.fromISO(sched.dtstart, { zone: sched.timezone });
             if (!dt.isValid) return { valid: false, error: "Invalid dtstart or timezone" };
-            // rrule parse
             try {
                 rrulestr(sched.rrule);
             } catch (e) {
@@ -216,17 +212,15 @@ const ChatbotScreen = ({ navigation }) => {
                 }
             }
         } catch (e) {
-            // parsing may fail for odd RRULE strings; fall through to dtstart fallback
         }
 
-        // Fallback: use dtstart's local time (in the provided timezone) if available
+        // Fallback: use dtstart's local time 
         try {
             if (sched.dtstart) {
                 const dt = DateTime.fromISO(sched.dtstart, { zone: sched.timezone });
                 if (dt.isValid) return [dt.toFormat("HH:mm")];
             }
         } catch (e) {
-            // ignore and return empty
         }
 
         return [];
@@ -237,7 +231,7 @@ const ChatbotScreen = ({ navigation }) => {
         if (!pendingSchedule) return;
         const scheduleId = pendingSchedule.schedule_id || generateLocalId();
 
-        // Normalize and validate dtstart with timezone to avoid year/offset issues
+        // Normalize dtstart with timezone 
         const dt = DateTime.fromISO(pendingSchedule.dtstart, { zone: pendingSchedule.timezone });
         if (!dt.isValid) {
             setMessages((prev) => [
@@ -248,7 +242,7 @@ const ChatbotScreen = ({ navigation }) => {
             return;
         }
 
-        // Use an ISO string with timezone offset to pass to the scheduler
+        // Use an ISO string for scheduler
         const dtIso = dt.toISO();
 
         try {
@@ -262,12 +256,11 @@ const ChatbotScreen = ({ navigation }) => {
                 occurrences: pendingSchedule.occurrences || 10,
             });
 
-            // persist scheduled ids under the required prefix
+            // persist scheduled ids 
             const storageKey = `@sched:notifications:${scheduleId}`;
             await AsyncStorage.setItem(storageKey, JSON.stringify(ids));
 
-            // Add confirmation message to chat (include schedule_id so we can cancel later)
-            // Keep the confirmation message minimal as requested, but keep schedule_id
+            // Add confirmation message to chat
             setMessages((prev) => [
                 ...prev,
                 {
@@ -277,7 +270,7 @@ const ChatbotScreen = ({ navigation }) => {
                 },
             ]);
 
-            // Also add a simple scheduled medicine entry so it appears in ScheduleScreen
+            // ScheduleScreen Card
             try {
                 const freqMatch = (pendingSchedule.rrule || "").match(/FREQ=([^;]+)/i);
                 const frequency = freqMatch ? freqMatch[1].toLowerCase() : "custom";
