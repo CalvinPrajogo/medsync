@@ -39,17 +39,31 @@ export const AdherenceProvider = ({ children }) => {
      * Mark a medication as taken for a specific date and time
      * @param {string} medicineId - Medicine ID
      * @param {string} date - Date string (YYYY-MM-DD)
-     * @param {string} time - Time string (HH:MM)
+     * @param {string} time - Time string (can be HH:MM, ISO string, or Date object)
      * @param {boolean} taken - Whether medication was taken
      */
     const markMedicationTaken = (medicineId, date, time, taken = true) => {
-        const key = `${medicineId}-${date}-${time}`;
+        // Normalize time to a consistent format using hours and minutes
+        let timeKey;
+        if (time instanceof Date) {
+            timeKey = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+        } else if (typeof time === 'string') {
+            const timeDate = new Date(time);
+            if (!isNaN(timeDate.getTime())) {
+                timeKey = `${timeDate.getHours().toString().padStart(2, '0')}:${timeDate.getMinutes().toString().padStart(2, '0')}`;
+            } else {
+                // Already in HH:MM format
+                timeKey = time;
+            }
+        }
+        
+        const key = `${medicineId}-${date}-${timeKey}`;
         const newHistory = {
             ...adherenceHistory,
             [key]: {
                 medicineId,
                 date,
-                time,
+                time: timeKey,
                 taken,
                 timestamp: new Date().toISOString(),
             },
@@ -62,11 +76,24 @@ export const AdherenceProvider = ({ children }) => {
      * Get adherence status for a specific medication, date, and time
      * @param {string} medicineId - Medicine ID
      * @param {string} date - Date string (YYYY-MM-DD)
-     * @param {string} time - Time string (HH:MM)
+     * @param {string} time - Time string (can be HH:MM, ISO string, or Date object)
      * @returns {boolean|null} True if taken, false if missed, null if not recorded
      */
     const getMedicationStatus = (medicineId, date, time) => {
-        const key = `${medicineId}-${date}-${time}`;
+        // Normalize time to HH:MM format
+        let timeKey;
+        if (time instanceof Date) {
+            timeKey = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+        } else if (typeof time === 'string') {
+            const timeDate = new Date(time);
+            if (!isNaN(timeDate.getTime())) {
+                timeKey = `${timeDate.getHours().toString().padStart(2, '0')}:${timeDate.getMinutes().toString().padStart(2, '0')}`;
+            } else {
+                timeKey = time;
+            }
+        }
+        
+        const key = `${medicineId}-${date}-${timeKey}`;
         return adherenceHistory[key]?.taken ?? null;
     };
 
