@@ -5,6 +5,7 @@ import { DateTime } from 'luxon';
 import { Platform } from 'react-native';
 
 const STORAGE_KEY_PREFIX = 'scheduled_notifications:';
+const PENDING_NOTIFICATIONS_KEY = '@notifications:pending';
 
 async function persistNotificationIds(scheduleId, ids) {
   const key = STORAGE_KEY_PREFIX + scheduleId;
@@ -12,6 +13,24 @@ async function persistNotificationIds(scheduleId, ids) {
     await AsyncStorage.setItem(key, JSON.stringify(ids));
   } catch (e) {
     console.warn('Failed to persist notification ids', e);
+  }
+}
+
+async function addPendingNotification(scheduleId, medicationName, triggerDate) {
+  try {
+    const existing = await AsyncStorage.getItem(PENDING_NOTIFICATIONS_KEY);
+    const pending = existing ? JSON.parse(existing) : [];
+    pending.push({
+      id: `${scheduleId}-${Date.now()}`,
+      scheduleId,
+      medicationName,
+      triggerDate: triggerDate.toISOString(),
+      completed: false,
+      createdAt: new Date().toISOString(),
+    });
+    await AsyncStorage.setItem(PENDING_NOTIFICATIONS_KEY, JSON.stringify(pending));
+  } catch (e) {
+    console.warn('Failed to add pending notification', e);
   }
 }
 
@@ -121,6 +140,9 @@ export async function scheduleRecurringNotifications({ scheduleId, title, body, 
         trigger: triggerDate,
       });
       notificationIds.push(id);
+      
+      // Add card to NotificationScreen
+      await addPendingNotification(scheduleId, title, triggerDate);
     } catch (err) {
       console.warn('Failed to schedule notification for', triggerDate, err);
     }
