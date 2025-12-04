@@ -112,10 +112,21 @@ const NotificationsScreen = ({ navigation }) => {
             // Get the date and time from triggerDate
             const triggerDate = new Date(notification.triggerDate);
             const today = triggerDate.toISOString().split('T')[0];
-            const time = triggerDate.toISOString(); // Use full ISO string for time
             
-            // Update adherence tracking
-            markMedicationTaken(medicineId, today, time, true);
+            // Create a time-only Date object matching the trigger time
+            // This matches how doseTimes are stored in the schedule
+            const timeOnly = new Date();
+            timeOnly.setHours(triggerDate.getHours(), triggerDate.getMinutes(), 0, 0);
+            
+            console.log('Marking as taken:', {
+                medicineId,
+                date: today,
+                time: timeOnly.toISOString(),
+                scheduleId: notification.scheduleId
+            });
+            
+            // Update adherence tracking - pass the Date object
+            markMedicationTaken(medicineId, today, timeOnly, true);
             
             // Decrement pill inventory
             decrementPill(medicineId);
