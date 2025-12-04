@@ -14,6 +14,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import ChatbotScreen from "../screens/ChatbotScreen";
 import InteractionCheckerScreen from "../screens/InteractionCheckerScreen";
+import MedicationHistoryScreen from "../screens/MedicationHistoryScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -54,6 +55,7 @@ const AppNavigator = () => {
                 <Stack.Screen name="Notifications" component={NotificationsScreen} />
                 <Stack.Screen name="Chatbot" component={ChatbotScreen} />
                 <Stack.Screen name="InteractionChecker" component={InteractionCheckerScreen} />
+                <Stack.Screen name="MedicationHistory" component={MedicationHistoryScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );
