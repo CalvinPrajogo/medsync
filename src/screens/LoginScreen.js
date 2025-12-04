@@ -13,16 +13,27 @@ import { COLORS, SIZES } from "../constants/theme";
 import { useState } from 'react';
 import { Alert, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { validateEmail } from '../utils/validation';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [emailError, setEmailError] = useState('');
     const { login } = useAuth();
 
     const handleLogin = async () => {
+        // Reset errors
+        setEmailError('');
+
+        // Validate inputs
         if (!email || !password) {
-            Alert.alert("Error", "Please fill in all fields");
+            Alert.alert("Missing Information", "Please fill in all fields");
+            return;
+        }
+
+        if (!validateEmail(email)) {
+            setEmailError('Please enter a valid email address');
             return;
         }
 
@@ -33,7 +44,7 @@ const LoginScreen = ({ navigation }) => {
         if (result.success) {
             navigation.navigate("Home");
         } else {
-            Alert.alert("Error", result.message);
+            Alert.alert("Login Failed", result.error);
         }
     };
 
@@ -53,13 +64,19 @@ const LoginScreen = ({ navigation }) => {
                     {/* Email Input */}
                     <TextInput
                         value={email}
-                        onChangeText={setEmail}
-                        style={styles.input}
+                        onChangeText={(text) => {
+                            setEmail(text);
+                            setEmailError('');
+                        }}
+                        style={[styles.input, emailError ? styles.inputError : null]}
                         placeholder="Email"
                         placeholderTextColor="#9CA3AF"
                         keyboardType="email-address"
                         autoCapitalize="none"
                     />
+                    {emailError ? (
+                        <Text style={styles.errorText}>{emailError}</Text>
+                    ) : null}
 
                     {/* Password Input */}
                     <TextInput
@@ -152,15 +169,26 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         padding: 16,
         fontSize: 16,
-        marginBottom: 16,
+        marginBottom: 8,
         borderWidth: 1,
         borderColor: COLORS.primary,
+    },
+    inputError: {
+        borderColor: "#FF3B30",
+        borderWidth: 2,
+    },
+    errorText: {
+        color: "#FF3B30",
+        fontSize: 12,
+        marginBottom: 12,
+        marginLeft: 4,
     },
     forgotPassword: {
         color: COLORS.primary,
         textAlign: "right",
         fontSize: 14,
         marginBottom: 24,
+        marginTop: 8,
     },
     signInButton: {
         backgroundColor: COLORS.primary,

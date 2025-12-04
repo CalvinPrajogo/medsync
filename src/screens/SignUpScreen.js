@@ -13,30 +13,55 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/theme";
 import { useAuth } from '../context/AuthContext';
+import { validateEmail, validatePassword } from '../utils/validation';
 
 const SignUpScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [confirmPasswordError, setConfirmPasswordError] = useState('');
     const { signup } = useAuth();
 
     const handleSignUp = async () => {
-        // Basic validation
-        if (!email || !password || !confirmPassword) {
-            Alert.alert("Error", "Please fill in all fields");
-            return;
+        // Reset errors
+        setEmailError('');
+        setPasswordError('');
+        setConfirmPasswordError('');
+
+        // Validate all fields
+        let hasError = false;
+
+        if (!email) {
+            setEmailError('Email is required');
+            hasError = true;
+        } else if (!validateEmail(email)) {
+            setEmailError('Please enter a valid email address');
+            hasError = true;
         }
 
-        if (password !== confirmPassword) {
-            Alert.alert("Error", "Passwords do not match");
-            return;
+        if (!password) {
+            setPasswordError('Password is required');
+            hasError = true;
+        } else {
+            const passwordValidation = validatePassword(password);
+            if (!passwordValidation.isValid) {
+                setPasswordError(passwordValidation.message);
+                hasError = true;
+            }
         }
 
-        if (password.length < 6) {
-            Alert.alert("Error", "Password must be at least 6 characters");
-            return;
+        if (!confirmPassword) {
+            setConfirmPasswordError('Please confirm your password');
+            hasError = true;
+        } else if (password !== confirmPassword) {
+            setConfirmPasswordError('Passwords do not match');
+            hasError = true;
         }
+
+        if (hasError) return;
 
         setLoading(true);
         const result = await signup(email, password);
@@ -54,7 +79,7 @@ const SignUpScreen = ({ navigation }) => {
                 ]
             );
         } else {
-            Alert.alert("Error", result.message);
+            Alert.alert("Sign Up Failed", result.error);
         }
     };
 
@@ -74,33 +99,45 @@ const SignUpScreen = ({ navigation }) => {
                     {/* Email Input */}
                     <TextInput
                         value={email}
-                        onChangeText={setEmail}
-                        style={styles.input}
+                        onChangeText={(text) => {
+                            setEmail(text);
+                            setEmailError('');
+                        }}
+                        style={[styles.input, emailError ? styles.inputError : null]}
                         placeholder="Email"
                         placeholderTextColor="#9CA3AF"
                         keyboardType="email-address"
                         autoCapitalize="none"
                     />
+                    {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
                     {/* Password Input */}
                     <TextInput
                         value={password}
-                        onChangeText={setPassword}
-                        style={styles.input}
+                        onChangeText={(text) => {
+                            setPassword(text);
+                            setPasswordError('');
+                        }}
+                        style={[styles.input, passwordError ? styles.inputError : null]}
                         placeholder="Password"
                         placeholderTextColor="#9CA3AF"
                         secureTextEntry
                     />
+                    {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
                     {/* Confirm Password Input */}
                     <TextInput
                         value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        style={styles.input}
+                        onChangeText={(text) => {
+                            setConfirmPassword(text);
+                            setConfirmPasswordError('');
+                        }}
+                        style={[styles.input, confirmPasswordError ? styles.inputError : null]}
                         placeholder="Confirm Password"
                         placeholderTextColor="#9CA3AF"
                         secureTextEntry
                     />
+                    {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
 
                     {/* Sign Up Button */}
                     <TouchableOpacity
@@ -176,9 +213,19 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         padding: 16,
         fontSize: 16,
-        marginBottom: 16,
+        marginBottom: 8,
         borderWidth: 1,
         borderColor: COLORS.primary,
+    },
+    inputError: {
+        borderColor: "#FF3B30",
+        borderWidth: 2,
+    },
+    errorText: {
+        color: "#FF3B30",
+        fontSize: 12,
+        marginBottom: 12,
+        marginLeft: 4,
     },
     signUpButton: {
         backgroundColor: COLORS.primary,
