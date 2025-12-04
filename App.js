@@ -12,13 +12,16 @@ Notifications.setNotificationHandler({
 import AppNavigator from "./src/navigation/AppNavigator";
 import { ScheduleProvider } from "./src/context/ScheduleContext";
 import { AuthProvider } from "./src/context/AuthContext";
+import { AdherenceProvider } from "./src/context/AdherenceContext";
 
 export default function App() {
     return (
         <AuthProvider>
-            <ScheduleProvider>
-                <AppNavigator />
-            </ScheduleProvider>
+            <AdherenceProvider>
+                <ScheduleProvider>
+                    <AppNavigator />
+                </ScheduleProvider>
+            </AdherenceProvider>
         </AuthProvider>
     );
 }

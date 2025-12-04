@@ -152,6 +152,29 @@ const HomeScreen = ({ navigation }) => {
                             </View>
                         </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => navigation.navigate("MedicationHistory")}
+                    >
+                        <View style={styles.cardContent}>
+                            <View style={styles.cardTextContainer}>
+                                <Text style={styles.cardTitle}>
+                                    Medication History
+                                </Text>
+                                <Text style={styles.cardSubtitle}>
+                                    View your adherence and{"\n"}medication tracking calendar
+                                </Text>
+                            </View>
+                            <View style={styles.iconCircle}>
+                                <MaterialCommunityIcons
+                                    name="calendar-check"
+                                    size={36}
+                                    color="white"
+                                />
+                            </View>
+                        </View>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </SafeAreaView>

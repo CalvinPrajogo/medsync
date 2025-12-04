@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
    View,
    Text,
@@ -12,10 +12,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSchedule } from "../context/ScheduleContext";
+import { useAdherence } from "../context/AdherenceContext";
 
 
 const ScheduleScreen = ({ navigation }) => {
    const { scheduledMedicines, removeFromSchedule } = useSchedule();
+   const { markMedicationTaken, getMedicationStatus } = useAdherence();
+   const [takenToday, setTakenToday] = useState({});
 
 
    const formatFrequency = (frequency) => {
@@ -59,6 +62,22 @@ const ScheduleScreen = ({ navigation }) => {
            day: "numeric",
            year: "numeric",
        });
+   };
+
+   const handleMarkTaken = (medicineId, time) => {
+       const today = new Date().toISOString().split("T")[0];
+       const key = `${medicineId}-${time}`;
+       const currentStatus = getMedicationStatus(medicineId, today, time);
+       
+       // Toggle taken status
+       const newStatus = !currentStatus;
+       markMedicationTaken(medicineId, today, time, newStatus);
+       
+       // Update local state for immediate UI feedback
+       setTakenToday(prev => ({
+           ...prev,
+           [key]: newStatus
+       }));
    };
 
 
@@ -135,18 +154,34 @@ const ScheduleScreen = ({ navigation }) => {
                                            <Text style={styles.doseTimesLabel}>Daily times:</Text>
                                        </View>
                                        <View style={styles.timeChips}>
-                                           {doseTimes.map((time, index) => (
-                                               <View key={index} style={styles.timeChip}>
-                                                   <MaterialCommunityIcons
-                                                       name="clock-outline"
-                                                       size={12}
-                                                       color={COLORS.primary}
-                                                   />
-                                                   <Text style={styles.timeChipText}>
-                                                       {formatTime(time)}
-                                                   </Text>
-                                               </View>
-                                           ))}
+                                           {doseTimes.map((time, index) => {
+                                               const today = new Date().toISOString().split("T")[0];
+                                               const key = `${item.id}-${time}`;
+                                               const isTaken = takenToday[key] ?? getMedicationStatus(item.id, today, time);
+                                               
+                                               return (
+                                                   <TouchableOpacity
+                                                       key={index}
+                                                       style={[
+                                                           styles.timeChip,
+                                                           isTaken && styles.timeChipTaken
+                                                       ]}
+                                                       onPress={() => handleMarkTaken(item.id, time)}
+                                                   >
+                                                       <MaterialCommunityIcons
+                                                           name={isTaken ? "check-circle" : "clock-outline"}
+                                                           size={12}
+                                                           color={isTaken ? "#34C759" : COLORS.primary}
+                                                       />
+                                                       <Text style={[
+                                                           styles.timeChipText,
+                                                           isTaken && styles.timeChipTextTaken
+                                                       ]}>
+                                                           {formatTime(time)}
+                                                       </Text>
+                                                   </TouchableOpacity>
+                                               );
+                                           })}
                                        </View>
                                    </View>
                                )}
@@ -382,7 +417,19 @@ const styles = StyleSheet.create({
        borderWidth: 1,
        borderColor: "#E0E0E0",
    },
+   timeChipTaken: {
+       backgroundColor: "#E8F5E9",
+       borderColor: "#34C759",
+   },
    timeChipText: {
+       fontSize: 12,
+       color: "#333",
+       marginLeft: 4,
+   },
+   timeChipTextTaken: {
+       color: "#34C759",
+       fontWeight: "600",
+   },
        fontSize: 12,
        fontWeight: "600",
        color: "#333",
