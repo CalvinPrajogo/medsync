@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     View,
     Text,
@@ -9,9 +9,54 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS, SIZES } from "../constants/theme";
 
+
+
 const HomeScreen = ({ navigation }) => {
+    const [hasActiveNotifications, setHasActiveNotifications] = useState(false);
+
+    const checkForActiveNotifications = useCallback(async () => {
+        try {
+            const raw = await AsyncStorage.getItem('@notifications:pending');
+            if (raw) {
+                const all = JSON.parse(raw);
+                const now = new Date();
+                
+                // Check for active and uncompleted notifications
+                const hasActive = all.some(n => {
+                    if (n.completed) return false;
+                    const triggerTime = new Date(n.triggerDate);
+                    return n.triggered || triggerTime <= now;
+                });
+                
+                setHasActiveNotifications(hasActive);
+            } else {
+                setHasActiveNotifications(false);
+            }
+        } catch (e) {
+            console.warn('Failed to check for active notifications', e);
+            setHasActiveNotifications(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Check on mount
+        checkForActiveNotifications();
+        
+        // Check periodically (every 30 seconds)
+        const interval = setInterval(checkForActiveNotifications, 30000);
+        
+        // Re-check when screen comes into focus
+        const unsubscribe = navigation.addListener('focus', checkForActiveNotifications);
+        
+        return () => {
+            clearInterval(interval);
+            unsubscribe();
+        };
+    }, [checkForActiveNotifications, navigation]);
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" />
@@ -29,6 +74,11 @@ const HomeScreen = ({ navigation }) => {
                     onPress={() => navigation.navigate("Notifications")}
                 >
                     <Text style={styles.iconText}>💬</Text>
+                    {hasActiveNotifications && (
+                        <View style={styles.notificationBadge}>
+                            <View style={styles.notificationDot} />
+                        </View>
+                    )}
                 </TouchableOpacity>
             </View>
 
@@ -280,6 +330,17 @@ const styles = StyleSheet.create({
         fontSize: 32,
         color: COLORS.white,
         fontWeight: "bold",
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: 4,
+        right: 4,
+    },
+    notificationDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#FF4444',
     },
 });
 
