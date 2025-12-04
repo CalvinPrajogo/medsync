@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../context/AuthContext";
 import LoadingScreen from "../screens/LoadingScreen";
 import LoginScreen from "../screens/LoginScreen";
@@ -15,14 +16,44 @@ import NotificationsScreen from "../screens/NotificationsScreen";
 import ChatbotScreen from "../screens/ChatbotScreen";
 import InteractionCheckerScreen from "../screens/InteractionCheckerScreen";
 import MedicationHistoryScreen from "../screens/MedicationHistoryScreen";
+import TermsAndConditionsScreen from "../screens/TermsAndConditionsScreen";
 
+const TERMS_ACCEPTED_KEY = "@medsync:terms_accepted";
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
     const { user, loading } = useAuth();
+    const [checkingTerms, setCheckingTerms] = useState(false);
+    const [initialRoute, setInitialRoute] = useState(null);
 
-    // Show loading screen while checking auth state
-    if (loading) {
+    useEffect(() => {
+        const checkTermsAndSetRoute = async () => {
+            if (user && !loading) {
+                setCheckingTerms(true);
+                try {
+                    const termsAccepted = await AsyncStorage.getItem(TERMS_ACCEPTED_KEY);
+                    if (termsAccepted === "true") {
+                        setInitialRoute("Home");
+                    } else {
+                        setInitialRoute("TermsAndConditions");
+                    }
+                } catch (error) {
+                    console.error("Error checking terms:", error);
+                    // If error, show terms screen to be safe
+                    setInitialRoute("TermsAndConditions");
+                } finally {
+                    setCheckingTerms(false);
+                }
+            } else if (!user && !loading) {
+                setInitialRoute("Login");
+            }
+        };
+
+        checkTermsAndSetRoute();
+    }, [user, loading]);
+
+    // Show loading screen while checking auth state or terms
+    if (loading || checkingTerms || !initialRoute) {
         return (
             <NavigationContainer>
                 <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -35,13 +66,14 @@ const AppNavigator = () => {
     return (
         <NavigationContainer>
             <Stack.Navigator
-                initialRouteName={user ? "Home" : "Login"} 
+                initialRouteName={initialRoute}
                 screenOptions={{
                     headerShown: false,
                 }}
             >
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="SignUp" component={SignUpScreen} />
+                <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
                 <Stack.Screen name="Home" component={HomeScreen} />
                 <Stack.Screen name="Database" component={DatabaseScreen} />
                 <Stack.Screen name="MedicineDetail" component={MedicineDetailScreen} />
