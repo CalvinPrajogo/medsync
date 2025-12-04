@@ -85,22 +85,6 @@ const ScheduleScreen = ({ navigation }) => {
        });
    };
 
-   const handleMarkTaken = (medicineId, time) => {
-       const today = new Date().toISOString().split("T")[0];
-       const key = `${medicineId}-${time}`;
-       const currentStatus = getMedicationStatus(medicineId, today, time);
-       
-       // Toggle taken status
-       const newStatus = !currentStatus;
-       markMedicationTaken(medicineId, today, time, newStatus);
-       
-       // Update local state for immediate UI feedback
-       setTakenToday(prev => ({
-           ...prev,
-           [key]: newStatus
-       }));
-   };
-
 
    const handleRemoveMedicine = async (item) => {
        Alert.alert(

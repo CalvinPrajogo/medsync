@@ -13,12 +13,16 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from 'expo-notifications';
 import { COLORS, SIZES } from "../constants/theme";
+import { useSchedule } from "../context/ScheduleContext";
+import { useAdherence } from "../context/AdherenceContext";
 
 const PENDING_NOTIFICATIONS_KEY = '@notifications:pending';
 
 const NotificationsScreen = ({ navigation }) => {
     const [notifications, setNotifications] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
+    const { decrementPill } = useSchedule();
+    const { markMedicationTaken } = useAdherence();
 
     const loadNotifications = useCallback(async () => {
         try {
@@ -100,13 +104,28 @@ const NotificationsScreen = ({ navigation }) => {
         setRefreshing(false);
     };
 
-    const markAsCompleted = async (notificationId) => {
+    const markAsCompleted = async (notification) => {
         try {
+            // Extract medicineId from scheduleId (format: "medicineId-index")
+            const medicineId = notification.scheduleId.split('-')[0];
+            
+            // Get the date and time from triggerDate
+            const triggerDate = new Date(notification.triggerDate);
+            const today = triggerDate.toISOString().split('T')[0];
+            const time = triggerDate.toISOString(); // Use full ISO string for time
+            
+            // Update adherence tracking
+            markMedicationTaken(medicineId, today, time, true);
+            
+            // Decrement pill inventory
+            decrementPill(medicineId);
+            
+            // Mark notification as completed in AsyncStorage
             const raw = await AsyncStorage.getItem(PENDING_NOTIFICATIONS_KEY);
             if (raw) {
                 const all = JSON.parse(raw);
                 const updated = all.map(n => 
-                    n.id === notificationId ? { ...n, completed: true, completedAt: new Date().toISOString() } : n
+                    n.id === notification.id ? { ...n, completed: true, completedAt: new Date().toISOString() } : n
                 );
                 await AsyncStorage.setItem(PENDING_NOTIFICATIONS_KEY, JSON.stringify(updated));
                 await loadNotifications();
@@ -140,7 +159,7 @@ const NotificationsScreen = ({ navigation }) => {
                 </View>
                 <TouchableOpacity
                     style={styles.completeButton}
-                    onPress={() => markAsCompleted(item.id)}
+                    onPress={() => markAsCompleted(item)}
                 >
                     <MaterialCommunityIcons name="check-circle-outline" size={28} color="#4CAF50" />
                 </TouchableOpacity>
