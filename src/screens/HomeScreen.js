@@ -175,6 +175,29 @@ const HomeScreen = ({ navigation }) => {
                             </View>
                         </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => navigation.navigate("FamilyCaregiver")}
+                    >
+                        <View style={styles.cardContent}>
+                            <View style={styles.cardTextContainer}>
+                                <Text style={styles.cardTitle}>
+                                    Family & Caregivers
+                                </Text>
+                                <Text style={styles.cardSubtitle}>
+                                    Manage family members and{"\n"}caregiver access
+                                </Text>
+                            </View>
+                            <View style={styles.iconCircle}>
+                                <MaterialCommunityIcons
+                                    name="account-group"
+                                    size={36}
+                                    color="white"
+                                />
+                            </View>
+                        </View>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </SafeAreaView>

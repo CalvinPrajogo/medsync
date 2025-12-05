@@ -17,6 +17,7 @@ import ChatbotScreen from "../screens/ChatbotScreen";
 import InteractionCheckerScreen from "../screens/InteractionCheckerScreen";
 import MedicationHistoryScreen from "../screens/MedicationHistoryScreen";
 import TermsAndConditionsScreen from "../screens/TermsAndConditionsScreen";
+import FamilyCaregiverScreen from "../screens/FamilyCaregiverScreen";
 
 const TERMS_ACCEPTED_KEY = "@medsync:terms_accepted";
 const Stack = createNativeStackNavigator();
@@ -88,6 +89,7 @@ const AppNavigator = () => {
                 <Stack.Screen name="Chatbot" component={ChatbotScreen} />
                 <Stack.Screen name="InteractionChecker" component={InteractionCheckerScreen} />
                 <Stack.Screen name="MedicationHistory" component={MedicationHistoryScreen} />
+                <Stack.Screen name="FamilyCaregiver" component={FamilyCaregiverScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );
