@@ -71,46 +71,8 @@ const SignUpScreen = ({ navigation }) => {
         setLoading(false);
 
         if (result.success) {
-            // Check if terms are accepted
-            try {
-                const termsAccepted = await AsyncStorage.getItem(TERMS_ACCEPTED_KEY);
-                if (termsAccepted === "true") {
-                    Alert.alert(
-                        "Success", 
-                        "Account created successfully!",
-                        [
-                            {
-                                text: "OK",
-                                onPress: () => navigation.navigate("Home")
-                            }
-                        ]
-                    );
-                } else {
-                    Alert.alert(
-                        "Success", 
-                        "Account created successfully!",
-                        [
-                            {
-                                text: "OK",
-                                onPress: () => navigation.navigate("TermsAndConditions")
-                            }
-                        ]
-                    );
-                }
-            } catch (error) {
-                console.error("Error checking terms:", error);
-                // If error, show terms screen to be safe
-                Alert.alert(
-                    "Success", 
-                    "Account created successfully!",
-                    [
-                        {
-                            text: "OK",
-                            onPress: () => navigation.navigate("TermsAndConditions")
-                        }
-                    ]
-                );
-            }
+            // New user - always show Terms and Conditions
+            navigation.navigate("TermsAndConditions");
         } else {
             Alert.alert("Sign Up Failed", result.error);
         }

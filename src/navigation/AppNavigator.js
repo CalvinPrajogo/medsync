@@ -24,13 +24,17 @@ const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
     const { user, loading } = useAuth();
-    const [checkingTerms, setCheckingTerms] = useState(false);
     const [initialRoute, setInitialRoute] = useState(null);
 
     useEffect(() => {
-        const checkTermsAndSetRoute = async () => {
-            if (user && !loading) {
-                setCheckingTerms(true);
+        const checkAuthAndSetRoute = async () => {
+            if (loading) return;
+            
+            // Only set initial route once
+            if (initialRoute !== null) return;
+            
+            if (user) {
+                // User is logged in - check terms
                 try {
                     const termsAccepted = await AsyncStorage.getItem(TERMS_ACCEPTED_KEY);
                     if (termsAccepted === "true") {
@@ -40,21 +44,19 @@ const AppNavigator = () => {
                     }
                 } catch (error) {
                     console.error("Error checking terms:", error);
-                    // If error, show terms screen to be safe
                     setInitialRoute("TermsAndConditions");
-                } finally {
-                    setCheckingTerms(false);
                 }
-            } else if (!user && !loading) {
+            } else {
+                // User is not logged in
                 setInitialRoute("Login");
             }
         };
 
-        checkTermsAndSetRoute();
-    }, [user, loading]);
+        checkAuthAndSetRoute();
+    }, [user, loading, initialRoute]);
 
-    // Show loading screen while checking auth state or terms
-    if (loading || checkingTerms || !initialRoute) {
+    // Show loading screen while checking auth state
+    if (loading || !initialRoute) {
         return (
             <NavigationContainer>
                 <Stack.Navigator screenOptions={{ headerShown: false }}>

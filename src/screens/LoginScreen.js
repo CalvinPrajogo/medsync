@@ -45,19 +45,24 @@ const LoginScreen = ({ navigation }) => {
         setLoading(false);
 
         if (result.success) {
-            // Check if terms are accepted
-            try {
-                const termsAccepted = await AsyncStorage.getItem(TERMS_ACCEPTED_KEY);
-                if (termsAccepted === "true") {
-                    navigation.navigate("Home");
-                } else {
+            // Wait a moment for auth state to update, then check terms and navigate
+            setTimeout(async () => {
+                try {
+                    const termsAccepted = await AsyncStorage.getItem(TERMS_ACCEPTED_KEY);
+                    console.log("Terms accepted:", termsAccepted);
+                    if (termsAccepted === "true") {
+                        navigation.navigate("Home");
+                    } else {
+                        // Navigate to Terms and Conditions
+                        console.log("Navigating to TermsAndConditions");
+                        navigation.navigate("TermsAndConditions");
+                    }
+                } catch (error) {
+                    console.error("Error checking terms:", error);
+                    // If error, show terms screen to be safe
                     navigation.navigate("TermsAndConditions");
                 }
-            } catch (error) {
-                console.error("Error checking terms:", error);
-                // If error, show terms screen to be safe
-                navigation.navigate("TermsAndConditions");
-            }
+            }, 200);
         } else {
             Alert.alert("Login Failed", result.error);
         }

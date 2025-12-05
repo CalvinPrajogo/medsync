@@ -29,7 +29,7 @@ const TermsAndConditionsScreen = ({ navigation }) => {
 
         try {
             await AsyncStorage.setItem(TERMS_ACCEPTED_KEY, "true");
-            navigation.replace("Home");
+            navigation.navigate("Home");
         } catch (error) {
             console.error("Error saving terms acceptance:", error);
             Alert.alert("Error", "Failed to save acceptance. Please try again.");
