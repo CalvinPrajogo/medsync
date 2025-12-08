@@ -11,9 +11,12 @@ import {
     ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS, SIZES } from "../constants/theme";
 import { useAuth } from '../context/AuthContext';
 import { validateEmail, validatePassword } from '../utils/validation';
+
+const TERMS_ACCEPTED_KEY = "@medsync:terms_accepted";
 
 const SignUpScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -68,16 +71,8 @@ const SignUpScreen = ({ navigation }) => {
         setLoading(false);
 
         if (result.success) {
-            Alert.alert(
-                "Success", 
-                "Account created successfully!",
-                [
-                    {
-                        text: "OK",
-                        onPress: () => navigation.navigate("Home")
-                    }
-                ]
-            );
+            // New user - always show Terms and Conditions
+            navigation.navigate("TermsAndConditions");
         } else {
             Alert.alert("Sign Up Failed", result.error);
         }

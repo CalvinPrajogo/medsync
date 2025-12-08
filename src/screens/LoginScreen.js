@@ -12,8 +12,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/theme";
 import { useState } from 'react';
 import { Alert, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { validateEmail } from '../utils/validation';
+
+const TERMS_ACCEPTED_KEY = "@medsync:terms_accepted";
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -42,7 +45,24 @@ const LoginScreen = ({ navigation }) => {
         setLoading(false);
 
         if (result.success) {
-            navigation.navigate("Home");
+            // Wait a moment for auth state to update, then check terms and navigate
+            setTimeout(async () => {
+                try {
+                    const termsAccepted = await AsyncStorage.getItem(TERMS_ACCEPTED_KEY);
+                    console.log("Terms accepted:", termsAccepted);
+                    if (termsAccepted === "true") {
+                        navigation.navigate("Home");
+                    } else {
+                        // Navigate to Terms and Conditions
+                        console.log("Navigating to TermsAndConditions");
+                        navigation.navigate("TermsAndConditions");
+                    }
+                } catch (error) {
+                    console.error("Error checking terms:", error);
+                    // If error, show terms screen to be safe
+                    navigation.navigate("TermsAndConditions");
+                }
+            }, 200);
         } else {
             Alert.alert("Login Failed", result.error);
         }
