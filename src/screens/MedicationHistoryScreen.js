@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { COLORS, SIZES } from "../constants/theme";
 import { useAdherence } from "../context/AdherenceContext";
 import { useSchedule } from "../context/ScheduleContext";
@@ -22,6 +23,13 @@ const MedicationHistoryScreen = ({ navigation }) => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const { getAdherenceForDate, calculateAdherence, getCurrentStreak } = useAdherence();
     const { scheduledMedicines } = useSchedule();
+
+    // Reset to today's date when screen comes into focus
+    useFocusEffect(
+        React.useCallback(() => {
+            setSelectedDate(new Date());
+        }, [])
+    );
 
     // Get current month calendar data
     const getMonthData = (date) => {
@@ -48,13 +56,20 @@ const MedicationHistoryScreen = ({ navigation }) => {
     };
 
     const formatDateKey = (date) => {
-        return date.toISOString().split("T")[0];
+        if (!date) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     };
     
     const formatTime = (time) => {
-        // If time is already a string (HH:MM format), return it
+        // If time is a string in HH:MM format, convert to 12-hour format
         if (typeof time === 'string' && /^\d{1,2}:\d{2}/.test(time)) {
-            return time;
+            const [hours, minutes] = time.split(':').map(Number);
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const hour12 = hours % 12 || 12;
+            return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`;
         }
         // If time is a Date object or ISO string, format it
         const timeDate = new Date(time);
@@ -376,10 +391,24 @@ const MedicationHistoryScreen = ({ navigation }) => {
                                 const dateStr = formatDateKey(selectedDate);
                                 
                                 // Check if selected date is on or after the medication start date
-                                const startDate = medicine.timing?.nextDoseDate ? new Date(medicine.timing.nextDoseDate) : null;
-                                if (!startDate) return null;
+                                if (!medicine.timing?.nextDoseDate) return null;
                                 
-                                const medicineStartDateStr = formatDateKey(startDate);
+                                // Get the start date string in YYYY-MM-DD format
+                                let medicineStartDateStr;
+                                const nextDoseDate = medicine.timing.nextDoseDate;
+                                
+                                if (typeof nextDoseDate === 'string') {
+                                    // If it's a string (ISO format), extract the date part
+                                    const isoDateMatch = nextDoseDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                                    if (!isoDateMatch) return null;
+                                    medicineStartDateStr = `${isoDateMatch[1]}-${isoDateMatch[2]}-${isoDateMatch[3]}`;
+                                } else if (nextDoseDate instanceof Date) {
+                                    // If it's a Date object, format it
+                                    medicineStartDateStr = formatDateKey(nextDoseDate);
+                                } else {
+                                    return null;
+                                }
+                                
                                 if (dateStr < medicineStartDateStr) return null; // Don't show if before start date
                                 
                                 return doseTimes.map((time, timeIndex) => {
