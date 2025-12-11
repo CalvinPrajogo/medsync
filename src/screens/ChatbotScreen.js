@@ -370,18 +370,6 @@ const ChatbotScreen = ({ navigation }) => {
                                     {message.content}
                                 </Text>
                             </View>
-
-                            {/* If this assistant message contains a schedule_id, show a small cancel button */}
-                            {message.schedule_id && (
-                                <View style={styles.scheduleActions}>
-                                    <TouchableOpacity
-                                        style={styles.scheduleActionButton}
-                                        onPress={() => cancelScheduled(message.schedule_id)}
-                                    >
-                                        <Text style={styles.scheduleActionText}>Cancel schedule</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
                         </View>
                     ))}
                     {loading && (
