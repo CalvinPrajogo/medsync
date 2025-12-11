@@ -16,7 +16,7 @@ import { useSchedule } from "../context/ScheduleContext";
 
 const { width } = Dimensions.get("window");
 const CALENDAR_WIDTH = width - SIZES.padding * 2;
-const DAY_WIDTH = CALENDAR_WIDTH / 7;
+const DAY_WIDTH = (CALENDAR_WIDTH - 18) / 7; // Ensure cells fit with proper spacing
 
 const MedicationHistoryScreen = ({ navigation }) => {
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -542,6 +542,7 @@ const styles = StyleSheet.create({
     dayLabels: {
         flexDirection: "row",
         marginBottom: 10,
+        width: CALENDAR_WIDTH,
     },
     dayLabel: {
         width: DAY_WIDTH,
@@ -549,10 +550,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         color: "#666",
+        marginRight: 2,
     },
     calendarGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
+        width: CALENDAR_WIDTH,
     },
     dayCell: {
         width: DAY_WIDTH,
@@ -561,6 +564,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderRadius: 8,
         marginBottom: 4,
+        marginRight: 2,
     },
     dayCellComplete: {
         backgroundColor: "#34C759",
